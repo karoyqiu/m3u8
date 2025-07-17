@@ -5,5 +5,15 @@
   "windows": [
     "main"
   ],
-  "permissions": ["dialog:allow-open"]
+  "permissions": [
+    "core:path:allow-join",
+    "dialog:allow-open",
+    "fs:allow-mkdir",
+    "fs:allow-stat",
+    "upload:allow-download",
+    {
+      "identifier": "http:default",
+      "allow": [{ "url": "https://*" }]
+    }
+  ]
 }

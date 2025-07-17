@@ -17,7 +17,7 @@ function App() {
       <div className="flex gap-2">
         {downloading ? (
           <Button key={`${dfId}abort`} variant="destructive" type="button" onClick={abort}>
-            <SquareIcon />
+            <SquareIcon fill="white" />
             Abort
           </Button>
         ) : (
