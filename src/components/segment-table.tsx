@@ -28,7 +28,6 @@ const columns: ColumnDef<Segment>[] = [
 ];
 
 export default function SegmentTable(props: SegmentTableProps) {
-  'use no memo';
   const { data } = props;
 
   return <DataTable {...{ columns, data }} />;

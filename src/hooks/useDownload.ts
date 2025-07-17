@@ -60,7 +60,7 @@ const downloadSegments = async (
   onStart(segments.map((seg) => seg.uri));
   const limit = pLimit(8);
 
-  await Promise.all(
+  await Promise.allSettled(
     segments.map((seg, index) =>
       limit(async () => {
         if (signal?.aborted) {
@@ -89,7 +89,7 @@ const downloadSegments = async (
 
         // 下载
         await retry({ times: 10, backoff: (c) => 2 ** c, signal }, () => {
-          console.debug('Downloading', url);
+          console.debug('Downloading', url.toString());
           return downloadAs(url.toString(), file, (progress) =>
             onProgress({
               index,
