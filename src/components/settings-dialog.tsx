@@ -62,7 +62,11 @@ export default function SettingsDialog() {
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form className="flex flex-col gap-6" onSubmit={form.handleSubmit(onSubmit)}>
+          <form
+            className="flex flex-col gap-6"
+            autoComplete="off"
+            onSubmit={form.handleSubmit(onSubmit)}
+          >
             <FormField
               control={form.control}
               name="dir"
@@ -71,12 +75,7 @@ export default function SettingsDialog() {
                   <FormLabel>Download directory</FormLabel>
                   <div className="flex">
                     <FormControl>
-                      <Input
-                        className="rounded-e-none border-e-0"
-                        {...field}
-                        autoFocus
-                        required
-                      />
+                      <Input className="rounded-e-none border-e-0" {...field} required />
                     </FormControl>
                     <Button
                       className="rounded-s-none"
