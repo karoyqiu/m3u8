@@ -1365,6 +1365,25 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@tanstack/react-table@npm:^8.21.3":
+  version: 8.21.3
+  resolution: "@tanstack/react-table@npm:8.21.3"
+  dependencies:
+    "@tanstack/table-core": "npm:8.21.3"
+  peerDependencies:
+    react: ">=16.8"
+    react-dom: ">=16.8"
+  checksum: 10/a32217ebe64d24e71dea6a6742bc288dcabf389657b16805a1ab3f347d3dca8262759c45c604a1f65bd97925d5cbdfb66d1be7637100a12eb5b279bdd420962d
+  languageName: node
+  linkType: hard
+
+"@tanstack/table-core@npm:8.21.3":
+  version: 8.21.3
+  resolution: "@tanstack/table-core@npm:8.21.3"
+  checksum: 10/aa05e5f80110f0f56d66161e950668ea6ef3e2ea4f3a2ccd5d5980b39b4feea987245b20531aee2c6743e6edd12c0361503413b63090c807f88a61b19bfd04f3
+  languageName: node
+  linkType: hard
+
 "@tauri-apps/api@npm:^2.6.0":
   version: 2.6.0
   resolution: "@tauri-apps/api@npm:2.6.0"
@@ -2473,6 +2492,7 @@ __metadata:
     "@radix-ui/react-progress": "npm:^1.1.7"
     "@radix-ui/react-slot": "npm:^1.2.3"
     "@tailwindcss/vite": "npm:^4.1.11"
+    "@tanstack/react-table": "npm:^8.21.3"
     "@tauri-apps/api": "npm:^2.6.0"
     "@tauri-apps/cli": "npm:^2.6.2"
     "@tauri-apps/plugin-dialog": "npm:^2.3.0"
@@ -2496,6 +2516,7 @@ __metadata:
     prettier: "npm:^3.6.2"
     prettier-plugin-organize-attributes: "npm:^1.0.0"
     prettier-plugin-tailwindcss: "npm:^0.6.14"
+    radashi: "npm:^12.6.0"
     react: "npm:^19.1.0"
     react-dom: "npm:^19.1.0"
     react-hook-form: "npm:^7.60.0"
@@ -2970,6 +2991,13 @@ __metadata:
     err-code: "npm:^2.0.2"
     retry: "npm:^0.12.0"
   checksum: 10/96e1a82453c6c96eef53a37a1d6134c9f2482f94068f98a59145d0986ca4e497bf110a410adf73857e588165eab3899f0ebcf7b3890c1b3ce802abc0d65967d4
+  languageName: node
+  linkType: hard
+
+"radashi@npm:^12.6.0":
+  version: 12.6.0
+  resolution: "radashi@npm:12.6.0"
+  checksum: 10/02e932c85b916d6edb1064bee00406023be254baeba948b76216470dd74f7194d207eb9f9d31727d7c0266c525e9514797c9eebc4cec306a9d3b47b50293417b
   languageName: node
   linkType: hard
 

@@ -115,9 +115,13 @@
     @apply border-border outline-ring/50;
   }
   html {
+    @apply h-screen w-screen;
     font-size: 82.5%;
   }
   body {
     @apply bg-background text-foreground;
+  }
+  #root {
+    @apply h-screen w-screen;
   }
 }

@@ -4,6 +4,7 @@ import { fetch } from '@tauri-apps/plugin-http';
 import { download as downloadAs } from '@tauri-apps/plugin-upload';
 import { Parser, type Segment } from 'm3u8-parser';
 import pLimit from 'p-limit';
+import { retry } from 'radashi';
 import { useCallback, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { useReadLocalStorage } from 'usehooks-ts';
@@ -25,7 +26,7 @@ const hash = async (s: string) => {
 };
 
 const downloadM3u8 = async (url: URL, signal?: AbortSignal) => {
-  console.log('Downloading', url);
+  console.debug('Downloading', url);
   const response = await fetch(url, { signal, connectTimeout: 30000 });
   const text = await response.text();
 
@@ -35,10 +36,10 @@ const downloadM3u8 = async (url: URL, signal?: AbortSignal) => {
   return parser.manifest;
 };
 
-const isNonEmptyFile = async (path: string) => {
+const isFileSize = async (path: string, size: number) => {
   try {
     const fileInfo = await stat(path);
-    return fileInfo.isFile && fileInfo.size > 0;
+    return fileInfo.isFile && fileInfo.size === size;
   } catch (e) {
     return false;
   }
@@ -66,29 +67,38 @@ const downloadSegments = async (
           return;
         }
 
+        // 获取分片长度
+        console.debug('Heading', seg.uri);
+        const url = new URL(seg.uri, baseUrl);
+        const response = await retry({ signal }, () => fetch(url, { method: 'HEAD', signal }));
+        const contentLength = response.headers.get('Content-Length');
+        const fileSize = parseInt(contentLength ?? '0', 10);
+
+        // 如果文件已存在长度一致，则认为已下载完成
         const file = await join(subdir, seg.uri);
 
-        // 如果文件已存在且不为空，就当作已经下载完成
-        if (await isNonEmptyFile(file)) {
+        if (await isFileSize(file, fileSize)) {
           onProgress({
             index,
-            downloaded: 1,
-            total: 1,
-            speed: 1,
+            downloaded: fileSize,
+            total: fileSize,
+            speed: 0,
           });
           return;
         }
 
-        const url = new URL(seg.uri, baseUrl);
-        console.log('Downloading', url);
-        await downloadAs(url.toString(), file, (progress) =>
-          onProgress({
-            index,
-            downloaded: progress.progressTotal,
-            total: progress.total,
-            speed: progress.transferSpeed,
-          }),
-        );
+        // 下载
+        await retry({ times: 10, backoff: (c) => 2 ** c, signal }, () => {
+          console.debug('Downloading', url);
+          return downloadAs(url.toString(), file, (progress) =>
+            onProgress({
+              index,
+              downloaded: progress.progressTotal,
+              total: progress.total,
+              speed: progress.transferSpeed,
+            }),
+          );
+        });
       }),
     ),
   );
@@ -120,6 +130,7 @@ export const useDownload = (props: UseDownloadProps) => {
       }
 
       setDownloading(true);
+      onStart([]);
 
       try {
         const url = new URL(params.url);
@@ -127,7 +138,7 @@ export const useDownload = (props: UseDownloadProps) => {
 
         ctrl.current = new AbortController();
         const file = await downloadM3u8(url, ctrl.current.signal);
-        console.log('m3u8', file);
+        console.debug('m3u8', file);
 
         if (file.playlists && file.playlists.length > 0) {
           // 播放列表，查找最佳分辨率
@@ -142,12 +153,12 @@ export const useDownload = (props: UseDownloadProps) => {
           });
 
           const best = file.playlists[0];
-          console.log('Best', file.playlists[0]);
+          console.debug('Best', file.playlists[0]);
 
           /// @ts-expect-error: 为啥没定义这个
           const bestUrl = new URL(best.uri as string, url);
           const bestFile = await downloadM3u8(bestUrl, ctrl.current.signal);
-          console.log('Best m3u8', bestFile);
+          console.debug('Best m3u8', bestFile);
 
           await downloadSegments(
             bestUrl,
