@@ -1,6 +1,7 @@
 import { join } from '@tauri-apps/api/path';
-import { mkdir, stat } from '@tauri-apps/plugin-fs';
+import { mkdir, stat, writeTextFile } from '@tauri-apps/plugin-fs';
 import { fetch } from '@tauri-apps/plugin-http';
+import { Command } from '@tauri-apps/plugin-shell';
 import { download as downloadAs } from '@tauri-apps/plugin-upload';
 import { Parser, type Segment } from 'm3u8-parser';
 import pLimit from 'p-limit';
@@ -43,9 +44,7 @@ const getFileSize = async (path: string) => {
     if (fileInfo.isFile) {
       return fileInfo.size;
     }
-  } catch (e) {
-    console.error(e);
-  }
+  } catch (e) {}
 
   return 0;
 };
@@ -77,6 +76,7 @@ const downloadSegments = async (
         const fileSize = await getFileSize(file);
 
         if (fileSize > 0) {
+          return;
           // 获取分片长度
           console.debug('Heading', seg.uri);
           const response = await retry({ signal }, () => fetch(url, { method: 'HEAD', signal }));
@@ -111,6 +111,76 @@ const downloadSegments = async (
     ),
   );
 };
+
+const mergeFiles = async (
+  dir: string,
+  filename: string,
+  segments: Segment[],
+  signal?: AbortSignal,
+) => {
+  if (signal?.aborted) {
+    return;
+  }
+
+  const subdir = await join(dir, `.tmp-${filename}`);
+  const filelistPath = await join(subdir, 'filelist.txt');
+  const filelist: string[] = [];
+
+  for (const seg of segments) {
+    filelist.push(`file '${seg.uri}'`);
+  }
+
+  await writeTextFile(filelistPath, filelist.join('\n'));
+
+  if (signal?.aborted) {
+    return;
+  }
+
+  const args = [
+    '-y',
+    '-progress',
+    'pipe:1',
+    '-nostats',
+    '-loglevel',
+    'error',
+    '-f',
+    'concat',
+    '-i',
+    filelistPath,
+    '-c',
+    'copy',
+    `../${filename}`,
+  ];
+  const ffmpeg = Command.sidecar('binaries/ffmpeg', args, { cwd: subdir });
+  ffmpeg.stdout.on('data', (line) => {
+    // const key = 'out_time_us=';
+
+    // if (line.startsWith(key)) {
+    //   console.debug(line);
+    // }
+    console.debug(line);
+  });
+
+  const waitForExit = waitForCommand(ffmpeg);
+  const child = await ffmpeg.spawn();
+
+  if (signal) {
+    if (signal.aborted) {
+      child.kill();
+      return;
+    }
+
+    signal.addEventListener('abort', () => child.kill());
+  }
+
+  await waitForExit;
+};
+
+const waitForCommand = (command: Command<string>) =>
+  new Promise((resolve, reject) => {
+    command.once('close', resolve);
+    command.once('error', reject);
+  });
 
 export type DownloadProgress = {
   index: number;
@@ -177,6 +247,7 @@ export const useDownload = (props: UseDownloadProps) => {
             onProgress,
             ctrl.current.signal,
           );
+          await mergeFiles(dir, filename, bestFile.segments, ctrl.current.signal);
         } else {
           await downloadSegments(
             url,
@@ -187,6 +258,7 @@ export const useDownload = (props: UseDownloadProps) => {
             onProgress,
             ctrl.current.signal,
           );
+          await mergeFiles(dir, filename, file.segments, ctrl.current.signal);
         }
       } catch (e) {
         console.error(e);

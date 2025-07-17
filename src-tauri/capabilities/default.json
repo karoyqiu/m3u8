@@ -9,11 +9,23 @@
     "core:path:allow-join",
     "dialog:allow-open",
     "fs:allow-mkdir",
+    "fs:allow-remove",
     "fs:allow-stat",
+    "fs:allow-write-text-file",
     "upload:allow-download",
     {
       "identifier": "http:default",
       "allow": [{ "url": "https://*" }]
+    },
+    {
+      "identifier": "shell:allow-spawn",
+      "allow": [
+        {
+          "sidecar": true,
+          "name": "binaries/ffmpeg",
+          "args": true
+        }
+      ]
     }
   ]
 }
