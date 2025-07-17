@@ -11,6 +11,7 @@ import { Toaster } from '@/components/ui/sonner';
 import { type DownloadProgress, useDownload } from '@/hooks/useDownload';
 
 function App() {
+  const [progress, setProgress] = useState(0);
   const [segments, setSegments] = useState<Segment[]>([]);
   const onStart = useCallback(
     (segs: string[]) =>
@@ -19,22 +20,29 @@ function App() {
       ),
     [],
   );
-  const onProgress = useCallback((progress: DownloadProgress) => {
+  const onDownload = useCallback((progress: DownloadProgress) => {
     const { index, ...rest } = progress;
-    setSegments((old) =>
-      old.toSpliced(index, 1, {
+    setSegments((old) => {
+      const segs = old.toSpliced(index, 1, {
         ...old[index],
         ...rest,
-      }),
-    );
-  }, []);
-  const { downloading, download, abort } = useDownload({ onStart, onProgress });
-  const dfId = useId();
+      });
 
-  const finished = segments.reduce(
-    (prev, seg) => (seg.downloaded === seg.total ? prev + 1 : prev),
-    0,
-  );
+      const finished = segs.reduce(
+        (prev, seg) => (seg.downloaded === seg.total ? prev + 1 : prev),
+        0,
+      );
+      setProgress(Math.round((finished * 100) / segs.length));
+
+      return segs;
+    });
+  }, []);
+  const { downloading, download, abort } = useDownload({
+    onStart,
+    onDownload,
+    onMerge: setProgress,
+  });
+  const dfId = useId();
 
   return (
     <>
@@ -54,7 +62,7 @@ function App() {
           )}
           <SettingsDialog />
         </div>
-        <Progress className="shrink-0" value={finished} max={segments.length || 100} />
+        <Progress className="shrink-0" value={progress} />
         <SegmentTable data={segments} />
       </main>
       <Toaster richColors />

@@ -1,5 +1,5 @@
 import { join } from '@tauri-apps/api/path';
-import { mkdir, stat, writeTextFile } from '@tauri-apps/plugin-fs';
+import { exists, mkdir, rename, writeTextFile } from '@tauri-apps/plugin-fs';
 import { fetch } from '@tauri-apps/plugin-http';
 import { Command } from '@tauri-apps/plugin-shell';
 import { download as downloadAs } from '@tauri-apps/plugin-upload';
@@ -37,18 +37,6 @@ const downloadM3u8 = async (url: URL, signal?: AbortSignal) => {
   return parser.manifest;
 };
 
-const getFileSize = async (path: string) => {
-  try {
-    const fileInfo = await stat(path);
-
-    if (fileInfo.isFile) {
-      return fileInfo.size;
-    }
-  } catch (e) {}
-
-  return 0;
-};
-
 const downloadSegments = async (
   baseUrl: URL,
   segments: Segment[],
@@ -73,32 +61,25 @@ const downloadSegments = async (
 
         const url = new URL(seg.uri, baseUrl);
         const file = await join(subdir, seg.uri);
-        const fileSize = await getFileSize(file);
 
-        if (fileSize > 0) {
+        // 如果文件存在，则跳过
+        if (await exists(file)) {
+          onProgress({
+            index,
+            downloaded: 1,
+            total: 1,
+            speed: 0,
+          });
           return;
-          // 获取分片长度
-          console.debug('Heading', seg.uri);
-          const response = await retry({ signal }, () => fetch(url, { method: 'HEAD', signal }));
-          const contentLength = response.headers.get('Content-Length');
-          const size = parseInt(contentLength ?? '0', 10);
-
-          // 如果文件长度一致，则认为已下载完成
-          if (fileSize === size) {
-            onProgress({
-              index,
-              downloaded: fileSize,
-              total: fileSize,
-              speed: 0,
-            });
-            return;
-          }
         }
+
+        // 文件不存在，先下载到临时文件
+        const temp = `${file}.dl`;
 
         // 下载
         await retry({ times: 10, backoff: (c) => 2 ** c, signal }, () => {
           console.debug('Downloading', url.toString());
-          return downloadAs(url.toString(), file, (progress) =>
+          return downloadAs(url.toString(), temp, (progress) =>
             onProgress({
               index,
               downloaded: progress.progressTotal,
@@ -107,15 +88,21 @@ const downloadSegments = async (
             }),
           );
         });
+
+        // 下载完成，重命名文件
+        await rename(temp, file);
       }),
     ),
   );
 };
 
+const OUT_TIME_US = 'out_time_us=';
+
 const mergeFiles = async (
   dir: string,
   filename: string,
   segments: Segment[],
+  onMerge: (percent: number) => void,
   signal?: AbortSignal,
 ) => {
   if (signal?.aborted) {
@@ -125,9 +112,11 @@ const mergeFiles = async (
   const subdir = await join(dir, `.tmp-${filename}`);
   const filelistPath = await join(subdir, 'filelist.txt');
   const filelist: string[] = [];
+  let duration = 0;
 
   for (const seg of segments) {
     filelist.push(`file '${seg.uri}'`);
+    duration += seg.duration;
   }
 
   await writeTextFile(filelistPath, filelist.join('\n'));
@@ -135,6 +124,8 @@ const mergeFiles = async (
   if (signal?.aborted) {
     return;
   }
+
+  onMerge(0);
 
   const args = [
     '-y',
@@ -153,12 +144,12 @@ const mergeFiles = async (
   ];
   const ffmpeg = Command.sidecar('binaries/ffmpeg', args, { cwd: subdir });
   ffmpeg.stdout.on('data', (line) => {
-    // const key = 'out_time_us=';
-
-    // if (line.startsWith(key)) {
-    //   console.debug(line);
-    // }
-    console.debug(line);
+    if (line.startsWith(OUT_TIME_US)) {
+      const value = line.substring(OUT_TIME_US.length);
+      const seconds = (parseFloat(value) || 0) / 1000000;
+      const percent = Math.min(Math.round((seconds * 100) / duration), 99);
+      onMerge(percent);
+    }
   });
 
   const waitForExit = waitForCommand(ffmpeg);
@@ -174,6 +165,7 @@ const mergeFiles = async (
   }
 
   await waitForExit;
+  onMerge(100);
 };
 
 const waitForCommand = (command: Command<string>) =>
@@ -191,11 +183,12 @@ export type DownloadProgress = {
 
 type UseDownloadProps = {
   onStart: (segments: string[]) => void;
-  onProgress: (progress: DownloadProgress) => void;
+  onDownload: (progress: DownloadProgress) => void;
+  onMerge: (percent: number) => void;
 };
 
 export const useDownload = (props: UseDownloadProps) => {
-  const { onStart, onProgress } = props;
+  const { onStart, onDownload, onMerge } = props;
   const [downloading, setDownloading] = useState(false);
   const dir = useReadLocalStorage<string>('dir');
   const ctrl = useRef<AbortController>(null);
@@ -244,10 +237,10 @@ export const useDownload = (props: UseDownloadProps) => {
             dir,
             filename,
             onStart,
-            onProgress,
+            onDownload,
             ctrl.current.signal,
           );
-          await mergeFiles(dir, filename, bestFile.segments, ctrl.current.signal);
+          await mergeFiles(dir, filename, bestFile.segments, onMerge, ctrl.current.signal);
         } else {
           await downloadSegments(
             url,
@@ -255,10 +248,10 @@ export const useDownload = (props: UseDownloadProps) => {
             dir,
             filename,
             onStart,
-            onProgress,
+            onDownload,
             ctrl.current.signal,
           );
-          await mergeFiles(dir, filename, file.segments, ctrl.current.signal);
+          await mergeFiles(dir, filename, file.segments, onMerge, ctrl.current.signal);
         }
       } catch (e) {
         console.error(e);
@@ -266,7 +259,7 @@ export const useDownload = (props: UseDownloadProps) => {
 
       setDownloading(false);
     },
-    [dir, onStart, onProgress],
+    [dir, onStart, onDownload, onMerge],
   );
 
   const abort = useCallback(() => {
