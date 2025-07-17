@@ -6,6 +6,7 @@ import DownloadForm from '@/components/download-form';
 import SegmentTable, { type Segment } from '@/components/segment-table';
 import SettingsDialog from '@/components/settings-dialog';
 import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
 import { Toaster } from '@/components/ui/sonner';
 import { type DownloadProgress, useDownload } from '@/hooks/useDownload';
 
@@ -30,6 +31,11 @@ function App() {
   const { downloading, download, abort } = useDownload({ onStart, onProgress });
   const dfId = useId();
 
+  const finished = segments.reduce(
+    (prev, seg) => (seg.downloaded === seg.total ? prev + 1 : prev),
+    0,
+  );
+
   return (
     <>
       <main className="flex h-screen w-screen flex-col gap-4 p-4">
@@ -48,6 +54,7 @@ function App() {
           )}
           <SettingsDialog />
         </div>
+        <Progress className="shrink-0" value={finished} max={segments.length || 100} />
         <SegmentTable data={segments} />
       </main>
       <Toaster richColors />
