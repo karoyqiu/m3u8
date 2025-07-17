@@ -3,6 +3,7 @@ import { mkdir, stat } from '@tauri-apps/plugin-fs';
 import { fetch } from '@tauri-apps/plugin-http';
 import { download as downloadAs } from '@tauri-apps/plugin-upload';
 import { Parser, type Segment } from 'm3u8-parser';
+import pLimit from 'p-limit';
 import { useCallback, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { useReadLocalStorage } from 'usehooks-ts';
@@ -48,29 +49,65 @@ const downloadSegments = async (
   segments: Segment[],
   dir: string,
   filename: string,
+  onStart: (segments: string[]) => void,
+  onProgress: (progress: DownloadProgress) => void,
   signal?: AbortSignal,
 ) => {
   const subdir = await join(dir, `.tmp-${filename}`);
   await mkdir(subdir, { recursive: true });
 
-  for (const seg of segments) {
-    const file = await join(subdir, seg.uri);
+  onStart(segments.map((seg) => seg.uri));
+  const limit = pLimit(8);
 
-    if (await isNonEmptyFile(file)) {
-      continue;
-    }
+  await Promise.all(
+    segments.map((seg, index) =>
+      limit(async () => {
+        if (signal?.aborted) {
+          return;
+        }
 
-    const url = new URL(seg.uri, baseUrl);
-    console.log('Downloading', url);
-    await downloadAs(url.toString(), file, (progress) => console.log(seg.uri, progress));
+        const file = await join(subdir, seg.uri);
 
-    if (signal?.aborted) {
-      break;
-    }
-  }
+        // 如果文件已存在且不为空，就当作已经下载完成
+        if (await isNonEmptyFile(file)) {
+          onProgress({
+            index,
+            downloaded: 1,
+            total: 1,
+            speed: 1,
+          });
+          return;
+        }
+
+        const url = new URL(seg.uri, baseUrl);
+        console.log('Downloading', url);
+        await downloadAs(url.toString(), file, (progress) =>
+          onProgress({
+            index,
+            downloaded: progress.progressTotal,
+            total: progress.total,
+            speed: progress.transferSpeed,
+          }),
+        );
+      }),
+    ),
+  );
 };
 
-export const useDownload = () => {
+export type DownloadProgress = {
+  index: number;
+  downloaded: number;
+  total: number;
+  speed: number;
+};
+
+type UseDownloadProps = {
+  onStart: (segments: string[]) => void;
+  onProgress: (progress: DownloadProgress) => void;
+};
+
+export const useDownload = (props: UseDownloadProps) => {
+  const { onStart, onProgress } = props;
   const [downloading, setDownloading] = useState(false);
   const dir = useReadLocalStorage<string>('dir');
   const ctrl = useRef<AbortController>(null);
@@ -111,9 +148,26 @@ export const useDownload = () => {
           const bestUrl = new URL(best.uri as string, url);
           const bestFile = await downloadM3u8(bestUrl, ctrl.current.signal);
           console.log('Best m3u8', bestFile);
-          await downloadSegments(bestUrl, bestFile.segments, dir, filename, ctrl.current.signal);
+
+          await downloadSegments(
+            bestUrl,
+            bestFile.segments,
+            dir,
+            filename,
+            onStart,
+            onProgress,
+            ctrl.current.signal,
+          );
         } else {
-          await downloadSegments(url, file.segments, dir, filename, ctrl.current.signal);
+          await downloadSegments(
+            url,
+            file.segments,
+            dir,
+            filename,
+            onStart,
+            onProgress,
+            ctrl.current.signal,
+          );
         }
       } catch (e) {
         console.error(e);

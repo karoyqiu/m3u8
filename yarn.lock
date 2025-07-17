@@ -2492,6 +2492,7 @@ __metadata:
     lucide-react: "npm:^0.525.0"
     m3u8-parser: "npm:^7.2.0"
     oxlint: "npm:^1.7.0"
+    p-limit: "npm:^6.2.0"
     prettier: "npm:^3.6.2"
     prettier-plugin-organize-attributes: "npm:^1.0.0"
     prettier-plugin-tailwindcss: "npm:^0.6.14"
@@ -2798,6 +2799,15 @@ __metadata:
     oxc_language_server: bin/oxc_language_server
     oxlint: bin/oxlint
   checksum: 10/95a4fbcd8df55e794b6dd98a63c84d4c506bf2e37a301ab053829016b6bf13629ab73410a14e25056ae4f467c3acf8923bd606eea94ccc6f59b376d9e83c6994
+  languageName: node
+  linkType: hard
+
+"p-limit@npm:^6.2.0":
+  version: 6.2.0
+  resolution: "p-limit@npm:6.2.0"
+  dependencies:
+    yocto-queue: "npm:^1.1.1"
+  checksum: 10/70e8df3e5f1c173c9bd9fa8390a3c5c2797505240ae42973536992b1f5f59a922153c2f35ff1bf36fb72a0f025b0f13fca062a4233e830adad446960d56b4d84
   languageName: node
   linkType: hard
 
@@ -3563,6 +3573,13 @@ __metadata:
   version: 5.0.0
   resolution: "yallist@npm:5.0.0"
   checksum: 10/1884d272d485845ad04759a255c71775db0fac56308764b4c77ea56a20d56679fad340213054c8c9c9c26fcfd4c4b2a90df993b7e0aaf3cdb73c618d1d1a802a
+  languageName: node
+  linkType: hard
+
+"yocto-queue@npm:^1.1.1":
+  version: 1.2.1
+  resolution: "yocto-queue@npm:1.2.1"
+  checksum: 10/0843d6c2c0558e5c06e98edf9c17942f25c769e21b519303a5c2adefd5b738c9b2054204dc856ac0cd9d134b1bc27d928ce84fd23c9e2423b7e013d5a6f50577
   languageName: node
   linkType: hard
 

@@ -3,12 +3,31 @@ import DownloadForm from '@/components/download-form';
 import SettingsDialog from '@/components/settings-dialog';
 import { Button } from '@/components/ui/button';
 import { Toaster } from '@/components/ui/sonner';
-import { useDownload } from '@/hooks/useDownload';
+import { useDownload, type DownloadProgress } from '@/hooks/useDownload';
 import { DownloadIcon, SquareIcon } from 'lucide-react';
-import { useId } from 'react';
+import { useCallback, useId, useState } from 'react';
+
+type Segment = Omit<DownloadProgress, 'index'> & {
+  segment: string;
+};
 
 function App() {
-  const { downloading, download, abort } = useDownload();
+  const [segments, setSegments] = useState<Segment[]>([]);
+  const onStart = useCallback(
+    (segs: string[]) =>
+      setSegments(segs.map((seg) => ({ segment: seg, downloaded: 0, total: 0, speed: 0 }))),
+    [],
+  );
+  const onProgress = useCallback((progress: DownloadProgress) => {
+    const { index, ...rest } = progress;
+    setSegments((old) =>
+      old.toSpliced(index, 1, {
+        ...old[index],
+        ...rest,
+      }),
+    );
+  }, []);
+  const { downloading, download, abort } = useDownload({ onStart, onProgress });
   const dfId = useId();
 
   return (
@@ -28,6 +47,9 @@ function App() {
         )}
         <SettingsDialog />
       </div>
+      {segments.map((seg) => (
+        <p key={seg.segment}>{JSON.stringify(seg)}</p>
+      ))}
       <Toaster richColors />
     </main>
   );
