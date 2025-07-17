@@ -36,13 +36,18 @@ const downloadM3u8 = async (url: URL, signal?: AbortSignal) => {
   return parser.manifest;
 };
 
-const isFileSize = async (path: string, size: number) => {
+const getFileSize = async (path: string) => {
   try {
     const fileInfo = await stat(path);
-    return fileInfo.isFile && fileInfo.size === size;
+
+    if (fileInfo.isFile) {
+      return fileInfo.size;
+    }
   } catch (e) {
-    return false;
+    console.error(e);
   }
+
+  return 0;
 };
 
 const downloadSegments = async (
@@ -67,24 +72,27 @@ const downloadSegments = async (
           return;
         }
 
-        // 获取分片长度
-        console.debug('Heading', seg.uri);
         const url = new URL(seg.uri, baseUrl);
-        const response = await retry({ signal }, () => fetch(url, { method: 'HEAD', signal }));
-        const contentLength = response.headers.get('Content-Length');
-        const fileSize = parseInt(contentLength ?? '0', 10);
-
-        // 如果文件已存在长度一致，则认为已下载完成
         const file = await join(subdir, seg.uri);
+        const fileSize = await getFileSize(file);
 
-        if (await isFileSize(file, fileSize)) {
-          onProgress({
-            index,
-            downloaded: fileSize,
-            total: fileSize,
-            speed: 0,
-          });
-          return;
+        if (fileSize > 0) {
+          // 获取分片长度
+          console.debug('Heading', seg.uri);
+          const response = await retry({ signal }, () => fetch(url, { method: 'HEAD', signal }));
+          const contentLength = response.headers.get('Content-Length');
+          const size = parseInt(contentLength ?? '0', 10);
+
+          // 如果文件长度一致，则认为已下载完成
+          if (fileSize === size) {
+            onProgress({
+              index,
+              downloaded: fileSize,
+              total: fileSize,
+              speed: 0,
+            });
+            return;
+          }
         }
 
         // 下载
@@ -186,12 +194,11 @@ export const useDownload = (props: UseDownloadProps) => {
 
       setDownloading(false);
     },
-    [dir],
+    [dir, onStart, onProgress],
   );
 
   const abort = useCallback(() => {
     ctrl?.current?.abort();
-    //setDownloading(false);
   }, []);
 
   return { downloading, download, abort };
