@@ -14,14 +14,24 @@
     "vscode": "yarn dlx @yarnpkg/sdks vscode"
   },
   "dependencies": {
+    "@hookform/resolvers": "^5.1.1",
+    "@radix-ui/react-dialog": "^1.1.14",
+    "@radix-ui/react-label": "^2.1.7",
+    "@radix-ui/react-progress": "^1.1.7",
     "@radix-ui/react-slot": "^1.2.3",
     "@tauri-apps/api": "^2.6.0",
+    "@tauri-apps/plugin-dialog": "^2.3.0",
+    "@tauri-apps/plugin-http": "^2.5.0",
+    "@tauri-apps/plugin-shell": "^2.3.0",
+    "@tauri-apps/plugin-upload": "^2.3.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.525.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "tailwind-merge": "^3.3.1"
+    "react-hook-form": "^7.60.0",
+    "tailwind-merge": "^3.3.1",
+    "zod": "^4.0.5"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.11",
@@ -31,7 +41,8 @@
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^4.6.0",
-    "oxlint": "^1.6.0",
+    "babel-plugin-react-compiler": "^19.1.0-rc.2",
+    "oxlint": "^1.7.0",
     "prettier": "^3.6.2",
     "prettier-plugin-organize-attributes": "^1.0.0",
     "prettier-plugin-tailwindcss": "^0.6.14",
