@@ -83,6 +83,12 @@ const downloadSegments = async (
 
         // 文件不存在，先下载到临时文件
         const temp = `${file}.dl`;
+        onDownload({
+          index,
+          downloaded: 1,
+          total: 100,
+          speed: 0,
+        });
 
         // 下载
         await retry({ times: 10, backoff: (c) => 2 ** c, signal }, () => {
