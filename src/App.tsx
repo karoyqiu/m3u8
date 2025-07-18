@@ -1,6 +1,5 @@
 import { useElementSize } from '@mantine/hooks';
 import { DownloadIcon, SquareIcon } from 'lucide-react';
-import { noop } from 'radashi';
 import { useCallback, useId, useState } from 'react';
 
 import '@/App.css';
@@ -12,13 +11,24 @@ import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Toaster } from '@/components/ui/sonner';
 import { type DownloadProgress, type DownloadSegment, useDownload } from '@/hooks/useDownload';
+import { ProgressBarStatus, getCurrentWindow } from '@tauri-apps/api/window';
+
+const appWindow = getCurrentWindow();
 
 function App() {
   const [progress, setProgress] = useState(0);
   const [segments, setSegments] = useState<DownloadSegment[]>([]);
 
+  const updateProgress = (value: number) => {
+    setProgress(value);
+    appWindow.setProgressBar({
+      status: value === 0 ? ProgressBarStatus.Indeterminate : ProgressBarStatus.Normal,
+      progress: value,
+    });
+  }
+
   const onStart = useCallback((segs: string[]) => {
-    setProgress(0);
+    updateProgress(0);
     setSegments(
       segs.map((seg) => ({ _id: seg, segment: seg, downloaded: 0, total: 100, speed: 0 })),
     );
@@ -36,17 +46,21 @@ function App() {
         (prev, seg) => (seg.downloaded === seg.total ? prev + 1 : prev),
         0,
       );
-      setProgress(Math.round((finished * 100) / segs.length));
+      updateProgress(Math.round((finished * 100) / segs.length));
 
       return segs;
     });
   }, []);
 
+  const onEnd = useCallback(() => {
+    appWindow.setProgressBar({ status: ProgressBarStatus.None });
+  }, []);
+
   const { downloading, download, abort } = useDownload({
     onStart,
     onDownload,
-    onMerge: setProgress,
-    onEnd: noop,
+    onMerge: updateProgress,
+    onEnd,
   });
 
   const dfId = useId();
