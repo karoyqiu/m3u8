@@ -1,4 +1,6 @@
+import { useElementSize } from '@mantine/hooks';
 import { DownloadIcon, SquareIcon } from 'lucide-react';
+import { noop } from 'radashi';
 import { useCallback, useId, useState } from 'react';
 
 import '@/App.css';
@@ -10,19 +12,18 @@ import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Toaster } from '@/components/ui/sonner';
 import { type DownloadProgress, type DownloadSegment, useDownload } from '@/hooks/useDownload';
-import { useElementSize } from '@mantine/hooks';
-import { noop } from 'radashi';
 
 function App() {
   const [progress, setProgress] = useState(0);
   const [segments, setSegments] = useState<DownloadSegment[]>([]);
-  const onStart = useCallback(
-    (segs: string[]) =>
-      setSegments(
-        segs.map((seg) => ({ _id: seg, segment: seg, downloaded: 0, total: 100, speed: 0 })),
-      ),
-    [],
-  );
+
+  const onStart = useCallback((segs: string[]) => {
+    setProgress(0);
+    setSegments(
+      segs.map((seg) => ({ _id: seg, segment: seg, downloaded: 0, total: 100, speed: 0 })),
+    );
+  }, []);
+
   const onDownload = useCallback((progress: DownloadProgress) => {
     const { index, ...rest } = progress;
     setSegments((old) => {
@@ -40,12 +41,14 @@ function App() {
       return segs;
     });
   }, []);
+
   const { downloading, download, abort } = useDownload({
     onStart,
     onDownload,
     onMerge: setProgress,
     onEnd: noop,
   });
+
   const dfId = useId();
   const { ref, width } = useElementSize();
 

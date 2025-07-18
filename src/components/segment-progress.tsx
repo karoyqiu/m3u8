@@ -1,6 +1,6 @@
+import { useCallback, useEffect, useRef } from 'react';
+
 import type { DownloadSegment } from '@/hooks/useDownload';
-import { useCallback } from 'react';
-import { Layer, Rect, Stage } from 'react-konva';
 
 // 块大小
 const blockSize = 12;
@@ -9,23 +9,6 @@ const gap = 2;
 // 包含间隙的块大小
 const fullBlockSize = blockSize + gap;
 
-const blockColor = (seg: DownloadSegment) => {
-  switch (seg.downloaded / seg.total) {
-    case 0:
-      //return 'bg-secondary';
-      //return 'var(--secondary)';
-      return 'gray';
-    case 1:
-      //return 'bg-green-500 dark:bg-green-700';
-      //return 'var(--color-green-500)';
-      return 'green';
-    default:
-      //return 'bg-yellow-500';
-      //return 'var(--color-yellow-500)';
-      return 'yellow';
-  }
-};
-
 type SegmentProgressProps = {
   width: number;
   segments: DownloadSegment[];
@@ -33,6 +16,7 @@ type SegmentProgressProps = {
 
 export default function SegmentProgress(props: SegmentProgressProps) {
   const { width, segments } = props;
+  const ref = useRef<HTMLCanvasElement>(null);
 
   // 一行最多的列数
   const cols = Math.max(Math.floor((width + gap) / fullBlockSize), 1);
@@ -41,31 +25,63 @@ export default function SegmentProgress(props: SegmentProgressProps) {
   // 需要的高度，去掉多余的间隙
   const height = Math.max(rows * fullBlockSize - gap, 0);
 
-  const calcPos = useCallback((index: number) => {
-    const x = (index % cols) * fullBlockSize;
-    const y = Math.floor(index / cols) * fullBlockSize;
-    return { x, y };
-  }, [cols])
+  const calcPos = useCallback(
+    (index: number) => {
+      const x = (index % cols) * fullBlockSize;
+      const y = Math.floor(index / cols) * fullBlockSize;
+      return { x, y };
+    },
+    [cols],
+  );
+
+  useEffect(() => {
+    const ctx = ref.current?.getContext('2d', { alpha: false });
+
+    if (ctx) {
+      const grays = new Path2D();
+      const yellows = new Path2D();
+      const greens = new Path2D();
+      const style = getComputedStyle(ctx.canvas);
+      const gray = style.getPropertyValue('--secondary');
+      const green = style.getPropertyValue('--color-green-700');
+      const yellow = style.getPropertyValue('--color-yellow-500');
+
+      for (let i = 0; i < segments.length; i++) {
+        const seg = segments[i];
+        const { x, y } = calcPos(i);
+
+        switch (seg.downloaded / seg.total) {
+          case 0:
+            grays.roundRect(x, y, blockSize, blockSize, 2);
+            break;
+          case 1:
+            greens.roundRect(x, y, blockSize, blockSize, 2);
+            break;
+          default:
+            yellows.roundRect(x, y, blockSize, blockSize, 2);
+            break;
+        }
+      }
+
+      ctx.save();
+      ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+      ctx.fillStyle = gray;
+      ctx.fill(grays);
+
+      ctx.fillStyle = yellow;
+      ctx.fill(yellows);
+
+      ctx.fillStyle = green;
+      ctx.fill(greens);
+
+      ctx.restore();
+    }
+  }, [segments, calcPos]);
 
   return (
-    <Stage width={width} height={height}>
-      <Layer>
-        {segments.map((seg, index) => (
-          <Rect
-            key={seg._id}
-            cornerRadius={2}
-            fill={blockColor(seg)}
-            width={blockSize}
-            height={blockSize}
-            strokeEnabled={false}
-            strokeHitEnabled={false}
-            shadowEnabled={false}
-            shadowForStrokeEnabled={false}
-            dashEnabled={false}
-            {...calcPos(index)}
-          />
-        ))}
-      </Layer>
-    </Stage>
+    <canvas ref={ref} width={width} height={height}>
+      No canvas.
+    </canvas>
   );
 }

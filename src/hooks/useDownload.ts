@@ -222,7 +222,7 @@ export const useDownload = (props: UseDownloadProps) => {
         const url = new URL(params.url);
         const filename = params.filename || (await hash(params.url));
 
-        console.info("Downloading top level playlist");
+        console.info('Downloading top level playlist');
         ctrl.current = new AbortController();
         const file = await downloadM3u8(url, ctrl.current.signal);
         console.debug('m3u8', file);
@@ -239,7 +239,7 @@ export const useDownload = (props: UseDownloadProps) => {
             return br.height - ar.height;
           });
 
-          console.info("Downloading the best playlist");
+          console.info('Downloading the best playlist');
           const best = file.playlists[0];
           console.debug('Best', file.playlists[0]);
 
@@ -257,14 +257,7 @@ export const useDownload = (props: UseDownloadProps) => {
             ctrl.current.signal,
           );
         } else {
-          await downloadSegments(
-            url,
-            file.segments,
-            dir,
-            filename,
-            props,
-            ctrl.current.signal,
-          );
+          await downloadSegments(url, file.segments, dir, filename, props, ctrl.current.signal);
         }
       } catch (e) {
         console.error(e);
