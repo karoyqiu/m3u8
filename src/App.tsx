@@ -3,24 +3,15 @@ import { useCallback, useId, useState } from 'react';
 
 import '@/App.css';
 import DownloadForm from '@/components/download-form';
+import SegmentProgress from '@/components/segment-progress';
 import SettingsDialog from '@/components/settings-dialog';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Toaster } from '@/components/ui/sonner';
 import { type DownloadProgress, type DownloadSegment, useDownload } from '@/hooks/useDownload';
-import { cn } from '@/lib/utils';
-
-const blockColor = (seg: DownloadSegment) => {
-  switch (seg.downloaded / seg.total) {
-    case 0:
-      return 'bg-secondary';
-    case 1:
-      return 'bg-green-500 dark:bg-green-700';
-    default:
-      return 'bg-yellow-500';
-  }
-};
+import { useElementSize } from '@mantine/hooks';
+import { noop } from 'radashi';
 
 function App() {
   const [progress, setProgress] = useState(0);
@@ -53,8 +44,10 @@ function App() {
     onStart,
     onDownload,
     onMerge: setProgress,
+    onEnd: noop,
   });
   const dfId = useId();
+  const { ref, width } = useElementSize();
 
   return (
     <>
@@ -75,18 +68,8 @@ function App() {
           <SettingsDialog />
         </div>
         <Progress className="shrink-0" value={progress} />
-        <ScrollArea className="min-h-0">
-          <div className="flex flex-wrap gap-[2px]">
-            {segments.map((seg) => (
-              <div
-                key={seg._id}
-                className={cn(
-                  'size-[12px] rounded-xs transition-colors duration-500',
-                  blockColor(seg),
-                )}
-              />
-            ))}
-          </div>
+        <ScrollArea className="min-h-0" ref={ref}>
+          <SegmentProgress width={width} segments={segments} />
         </ScrollArea>
       </main>
       <Toaster richColors />

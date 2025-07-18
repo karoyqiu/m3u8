@@ -1,5 +1,6 @@
+import { readLocalStorageValue } from '@mantine/hooks';
 import { join } from '@tauri-apps/api/path';
-import { exists, mkdir, rename, writeTextFile } from '@tauri-apps/plugin-fs';
+import { exists, mkdir, remove, rename, writeTextFile } from '@tauri-apps/plugin-fs';
 import { fetch } from '@tauri-apps/plugin-http';
 import { Command } from '@tauri-apps/plugin-shell';
 import { download as downloadAs } from '@tauri-apps/plugin-upload';
@@ -8,8 +9,14 @@ import pLimit from 'p-limit';
 import { retry } from 'radashi';
 import { useCallback, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { useReadLocalStorage } from 'usehooks-ts';
 import { z } from 'zod/v4-mini';
+
+type UseDownloadProps = {
+  onStart: (segments: string[]) => void;
+  onDownload: (progress: DownloadProgress) => void;
+  onMerge: (percent: number) => void;
+  onEnd: () => void;
+};
 
 export const downloadParamsSchema = z.object({
   /// 要下载的 URL
@@ -42,17 +49,18 @@ const downloadSegments = async (
   segments: Segment[],
   dir: string,
   filename: string,
-  onStart: (segments: string[]) => void,
-  onProgress: (progress: DownloadProgress) => void,
+  props: UseDownloadProps,
   signal?: AbortSignal,
 ) => {
+  const { onStart, onDownload, onMerge, onEnd } = props;
   const subdir = await join(dir, `.tmp-${filename}`);
   await mkdir(subdir, { recursive: true });
 
+  console.info(`Downloading ${segments.length} segments`);
   onStart(segments.map((seg) => seg.uri));
   const limit = pLimit(8);
 
-  await Promise.allSettled(
+  await Promise.all(
     segments.map((seg, index) =>
       limit(async () => {
         if (signal?.aborted) {
@@ -64,7 +72,7 @@ const downloadSegments = async (
 
         // 如果文件存在，则跳过
         if (await exists(file)) {
-          onProgress({
+          onDownload({
             index,
             downloaded: 1,
             total: 1,
@@ -80,7 +88,7 @@ const downloadSegments = async (
         await retry({ times: 10, backoff: (c) => 2 ** c, signal }, () => {
           console.debug('Downloading', url.toString());
           return downloadAs(url.toString(), temp, (progress) =>
-            onProgress({
+            onDownload({
               index,
               downloaded: progress.progressTotal,
               total: progress.total,
@@ -94,12 +102,20 @@ const downloadSegments = async (
       }),
     ),
   );
+
+  await mergeFiles(subdir, filename, segments, onMerge, signal);
+
+  console.info('Cleaning up');
+  await remove(subdir, { recursive: true });
+
+  console.info('All done');
+  onEnd();
 };
 
 const OUT_TIME_US = 'out_time_us=';
 
 const mergeFiles = async (
-  dir: string,
+  subdir: string,
   filename: string,
   segments: Segment[],
   onMerge: (percent: number) => void,
@@ -109,7 +125,7 @@ const mergeFiles = async (
     return;
   }
 
-  const subdir = await join(dir, `.tmp-${filename}`);
+  console.info('Merging');
   const filelistPath = await join(subdir, 'filelist.txt');
   const filelist: string[] = [];
   let duration = 0;
@@ -186,32 +202,27 @@ export type DownloadSegment = Omit<DownloadProgress, 'index'> & {
   segment: string;
 };
 
-type UseDownloadProps = {
-  onStart: (segments: string[]) => void;
-  onDownload: (progress: DownloadProgress) => void;
-  onMerge: (percent: number) => void;
-};
-
 export const useDownload = (props: UseDownloadProps) => {
-  const { onStart, onDownload, onMerge } = props;
   const [downloading, setDownloading] = useState(false);
-  const dir = useReadLocalStorage<string>('dir');
   const ctrl = useRef<AbortController>(null);
 
   const download = useCallback(
     async (params: DownloadParams) => {
+      const dir = readLocalStorageValue<string>({ key: 'dir' });
+
       if (!dir) {
         toast.error('The download directory is not set.');
         return;
       }
 
       setDownloading(true);
-      onStart([]);
+      props.onStart([]);
 
       try {
         const url = new URL(params.url);
         const filename = params.filename || (await hash(params.url));
 
+        console.info("Downloading top level playlist");
         ctrl.current = new AbortController();
         const file = await downloadM3u8(url, ctrl.current.signal);
         console.debug('m3u8', file);
@@ -228,6 +239,7 @@ export const useDownload = (props: UseDownloadProps) => {
             return br.height - ar.height;
           });
 
+          console.info("Downloading the best playlist");
           const best = file.playlists[0];
           console.debug('Best', file.playlists[0]);
 
@@ -241,22 +253,18 @@ export const useDownload = (props: UseDownloadProps) => {
             bestFile.segments,
             dir,
             filename,
-            onStart,
-            onDownload,
+            props,
             ctrl.current.signal,
           );
-          await mergeFiles(dir, filename, bestFile.segments, onMerge, ctrl.current.signal);
         } else {
           await downloadSegments(
             url,
             file.segments,
             dir,
             filename,
-            onStart,
-            onDownload,
+            props,
             ctrl.current.signal,
           );
-          await mergeFiles(dir, filename, file.segments, onMerge, ctrl.current.signal);
         }
       } catch (e) {
         console.error(e);
@@ -264,7 +272,7 @@ export const useDownload = (props: UseDownloadProps) => {
 
       setDownloading(false);
     },
-    [dir, onStart, onDownload, onMerge],
+    [props],
   );
 
   const abort = useCallback(() => {

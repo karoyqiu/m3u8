@@ -1,8 +1,8 @@
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema';
+import { useLocalStorage } from '@mantine/hooks';
 import { open } from '@tauri-apps/plugin-dialog';
 import { EllipsisIcon, SaveIcon, SettingsIcon } from 'lucide-react';
 import { useForm } from 'react-hook-form';
-import { useLocalStorage } from 'usehooks-ts';
 import { z } from 'zod/v4-mini';
 
 import { Button } from '@/components/ui/button';
@@ -33,7 +33,7 @@ const settingsSchema = z.object({
 type ValuesType = z.infer<typeof settingsSchema>;
 
 export default function SettingsDialog() {
-  const [dir, setDir] = useLocalStorage('dir', '');
+  const [dir, setDir] = useLocalStorage({ key: 'dir' });
   const form = useForm<ValuesType>({
     resolver: standardSchemaResolver(settingsSchema),
     defaultValues: {
