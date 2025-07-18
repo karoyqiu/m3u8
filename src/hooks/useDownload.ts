@@ -181,6 +181,11 @@ export type DownloadProgress = {
   speed: number;
 };
 
+export type DownloadSegment = Omit<DownloadProgress, 'index'> & {
+  _id: string;
+  segment: string;
+};
+
 type UseDownloadProps = {
   onStart: (segments: string[]) => void;
   onDownload: (progress: DownloadProgress) => void;
