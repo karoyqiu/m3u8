@@ -14,6 +14,7 @@
       {
         "title": "m3u8",
         "center": true,
+        "visible": false,
         "width": 560,
         "height": 960
       }

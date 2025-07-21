@@ -1,7 +1,7 @@
 import { useElementSize } from '@mantine/hooks';
 import { ProgressBarStatus, getCurrentWindow } from '@tauri-apps/api/window';
 import { DownloadIcon, SquareIcon } from 'lucide-react';
-import { useCallback, useId, useState } from 'react';
+import { useCallback, useEffect, useId, useState } from 'react';
 
 import '@/App.css';
 import DownloadForm from '@/components/download-form';
@@ -66,6 +66,10 @@ function App() {
 
   const dfId = useId();
   const { ref, width } = useElementSize();
+
+  useEffect(() => {
+    appWindow.show();
+  }, []);
 
   return (
     <>

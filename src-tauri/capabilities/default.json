@@ -6,6 +6,7 @@
   "permissions": [
     "core:path:allow-join",
     "core:window:allow-set-progress-bar",
+    "core:window:allow-show",
     "dialog:allow-open",
     "fs:allow-exists",
     "fs:allow-mkdir",
