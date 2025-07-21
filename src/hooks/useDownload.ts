@@ -5,7 +5,6 @@ import {
   mkdir,
   readTextFile,
   remove,
-  rename,
   writeFile,
   writeTextFile,
 } from '@tauri-apps/plugin-fs';
@@ -57,7 +56,7 @@ const downloadM3u8 = async (
     text = await readTextFile(path);
   } catch (e) {
     console.debug('Downloading', url);
-    const response = await fetch(url, { signal, connectTimeout: 30000 });
+    const response = await fetch(url, { connectTimeout: 30000, keepalive: true, signal });
     text = await response.text();
 
     await writeTextFile(path, text);
@@ -95,39 +94,29 @@ const downloadSegments = async (
         const file = await join(subdir, seg.uri);
 
         // 如果文件存在，则跳过
-        if (await exists(file)) {
+        if (!(await exists(file))) {
+          // 文件不存在
           onDownload({
             index,
             downloaded: 1,
-            total: 1,
+            total: 100,
           });
-          return;
+
+          // 下载
+          await retry({ times: 10, backoff: (c) => 2 ** c, signal }, async () => {
+            console.debug('Downloading', url.toString());
+            const resp = await fetch(url, { connectTimeout: 30000, keepalive: true, signal });
+
+            if (resp.body) {
+              const bytes = await resp.bytes();
+              await writeFile(file, bytes);
+            } else {
+              console.warn(`No body for index ${index}`);
+            }
+          });
         }
 
-        // 文件不存在，先下载到临时文件
-        const temp = `${file}.dl`;
-        onDownload({
-          index,
-          downloaded: 1,
-          total: 100,
-        });
-
-        // 下载
-        await retry({ times: 10, backoff: (c) => 2 ** c, signal }, async () => {
-          console.debug('Downloading', url.toString());
-          const resp = await fetch(url, { signal, connectTimeout: 30000 });
-
-          if (resp.body) {
-            const bytes = await resp.bytes();
-            await writeFile(temp, bytes);
-          } else {
-            console.warn(`No body for index ${index}`);
-          }
-        });
-
-        // 下载完成，重命名文件
-        await rename(temp, file);
-
+        // 下载完成
         onDownload({
           index,
           downloaded: 100,
@@ -300,6 +289,7 @@ export const useDownload = (props: UseDownloadProps) => {
         }
       } catch (e) {
         console.error(e);
+        ctrl.current?.abort(e);
       }
 
       setDownloading(false);

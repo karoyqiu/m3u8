@@ -33,7 +33,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@babel/core@npm:^7.27.4":
+"@babel/core@npm:^7.28.0":
   version: 7.28.0
   resolution: "@babel/core@npm:7.28.0"
   dependencies:
@@ -1101,10 +1101,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@rolldown/pluginutils@npm:1.0.0-beta.19":
-  version: 1.0.0-beta.19
-  resolution: "@rolldown/pluginutils@npm:1.0.0-beta.19"
-  checksum: 10/3b09ebf03e0f30b48770bcd7075c3092c6be09f60e6cb320142a37ae651cfc03974186b24cd7df5bd8110561c1da9d3e8bb4ecff0f2459ca4370da3d62c6806e
+"@rolldown/pluginutils@npm:1.0.0-beta.27":
+  version: 1.0.0-beta.27
+  resolution: "@rolldown/pluginutils@npm:1.0.0-beta.27"
+  checksum: 10/4f7da788d88b33d029d5acf84c63be27c62d7c53017476f2e3026172cf94062cb399cd15194c89574578f192016bbcb1e040ce6811b3bb9ec4d4faa2ad386459
   languageName: node
   linkType: hard
 
@@ -1421,10 +1421,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@tauri-apps/api@npm:^2.6.0":
-  version: 2.6.0
-  resolution: "@tauri-apps/api@npm:2.6.0"
-  checksum: 10/db22140e6f65a36ac4af72625f906f3b2bf4422eb00e66243732b797a1b5eea6cd3a1f632234c788f52882c1d4d60f21df15f1224157a51f5983c6b8aee9fa89
+"@tauri-apps/api@npm:^2.6.0, @tauri-apps/api@npm:^2.7.0":
+  version: 2.7.0
+  resolution: "@tauri-apps/api@npm:2.7.0"
+  checksum: 10/db91d491b7b9527a2ad712c02d112a505fec16b7a9b3605c8fc36bc6c78ab45b9fb37a10124b78bdbea9dcb54e8e0c635b8adb5211074bb3ff399db88086af0c
   languageName: node
   linkType: hard
 
@@ -1549,30 +1549,30 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@tauri-apps/plugin-dialog@npm:^2.3.0":
-  version: 2.3.0
-  resolution: "@tauri-apps/plugin-dialog@npm:2.3.0"
+"@tauri-apps/plugin-dialog@npm:^2.3.1":
+  version: 2.3.1
+  resolution: "@tauri-apps/plugin-dialog@npm:2.3.1"
   dependencies:
     "@tauri-apps/api": "npm:^2.6.0"
-  checksum: 10/f130b6602e016492948e8062470e95ceee0f60f5211054741317f681607abe3e1b50ffa3dd65918053c65e590cddffc1c738cef73b470774cf7a072ac11f365b
+  checksum: 10/38cdf39f7171c0e1590435097869fd8beb49105704b329b978f1578f8621dd0e49730c08a36312a678c5d86102604ad09b4d607acdc1146db61f87e4067a3e1b
   languageName: node
   linkType: hard
 
-"@tauri-apps/plugin-fs@npm:^2.4.0":
-  version: 2.4.0
-  resolution: "@tauri-apps/plugin-fs@npm:2.4.0"
+"@tauri-apps/plugin-fs@npm:^2.4.1":
+  version: 2.4.1
+  resolution: "@tauri-apps/plugin-fs@npm:2.4.1"
   dependencies:
     "@tauri-apps/api": "npm:^2.6.0"
-  checksum: 10/587924216dcd143bf92446322ef0d126ef862e9ab541372700bc806f9630cee0aab898e0df8426b0b53e1f5bc1fdfa0621743eb241b4798ddef49201676d3270
+  checksum: 10/905f7b4c483cf31c69f6c07ced92348381eadb4ee299fa638fa6afee21f0ba9585507f1bd23a5327585e3492d6bef2eab90ddfb1d6e4a02bb1cc7054446d3c6c
   languageName: node
   linkType: hard
 
-"@tauri-apps/plugin-http@npm:^2.5.0":
-  version: 2.5.0
-  resolution: "@tauri-apps/plugin-http@npm:2.5.0"
+"@tauri-apps/plugin-http@npm:^2.5.1":
+  version: 2.5.1
+  resolution: "@tauri-apps/plugin-http@npm:2.5.1"
   dependencies:
     "@tauri-apps/api": "npm:^2.6.0"
-  checksum: 10/c29b00dd18c7cb972ba52fcf749253f344c07d03f423fd306a83c58c5356298ace2e25d7ab0e130dc538201596723acf50550c2a03950cc5862f9f545b4736d5
+  checksum: 10/3a9c3e1100dd825478dad020915afe5840331f0eca68c6b3eeffa4661b4491ef4ce8929e69db1348e95cc1cf51646702facc026338c370cb26c306e3f4961c49
   languageName: node
   linkType: hard
 
@@ -1582,15 +1582,6 @@ __metadata:
   dependencies:
     "@tauri-apps/api": "npm:^2.6.0"
   checksum: 10/3dc37e5b9bcc44b5d09d117963999a1a51bb2bdf1cf8db1169dc4d6b54cd7e5d240ca2776e8bf198ae77c33651bb037243debb27fba874a6afd837a16d32cedc
-  languageName: node
-  linkType: hard
-
-"@tauri-apps/plugin-upload@npm:^2.3.0":
-  version: 2.3.0
-  resolution: "@tauri-apps/plugin-upload@npm:2.3.0"
-  dependencies:
-    "@tauri-apps/api": "npm:^2.6.0"
-  checksum: 10/511422f2f96eca65efecd8a207ff4d63423d368fbc0c189c26b9d026335edd2c9a75dfe80518c7c7f0a0c7b2c9e47040ee7b559dfd3fdf49e463850812f5dcda
   languageName: node
   linkType: hard
 
@@ -1686,10 +1677,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/m3u8-parser@npm:^7.2.2":
-  version: 7.2.2
-  resolution: "@types/m3u8-parser@npm:7.2.2"
-  checksum: 10/147030a9a9194434cfcec401e47a06a29e84c26081289bb8de3b088fd6fd8c8c8f9b489471377c459c28b2af1e4be18ba292a0a7809635ba077333d09bb4de13
+"@types/m3u8-parser@npm:^7.2.3":
+  version: 7.2.3
+  resolution: "@types/m3u8-parser@npm:7.2.3"
+  checksum: 10/99d83693c7b73a9ddd44a3ffc6fbf1b322ad8070a59a1db19afa868fefde6e93bbd992d7d2ce07139b30d78d1636066f140e1018038f6d51120f5996203abbdd
   languageName: node
   linkType: hard
 
@@ -1730,19 +1721,19 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@vitejs/plugin-react@npm:^4.6.0":
-  version: 4.6.0
-  resolution: "@vitejs/plugin-react@npm:4.6.0"
+"@vitejs/plugin-react@npm:^4.7.0":
+  version: 4.7.0
+  resolution: "@vitejs/plugin-react@npm:4.7.0"
   dependencies:
-    "@babel/core": "npm:^7.27.4"
+    "@babel/core": "npm:^7.28.0"
     "@babel/plugin-transform-react-jsx-self": "npm:^7.27.1"
     "@babel/plugin-transform-react-jsx-source": "npm:^7.27.1"
-    "@rolldown/pluginutils": "npm:1.0.0-beta.19"
+    "@rolldown/pluginutils": "npm:1.0.0-beta.27"
     "@types/babel__core": "npm:^7.20.5"
     react-refresh: "npm:^0.17.0"
   peerDependencies:
-    vite: ^4.2.0 || ^5.0.0 || ^6.0.0 || ^7.0.0-beta.0
-  checksum: 10/f05479b74070bcaa7aedfc0aefcfb40f732ccd0126b30885113719ff0c471b7a09626546c0a6b9404ce66245689b11cb3103c42e59c211ea518713d73c028b02
+    vite: ^4.2.0 || ^5.0.0 || ^6.0.0 || ^7.0.0
+  checksum: 10/619a5d650ce0e8e2f37dae369b803990c6647e81ec983a00e44a734b3feeefd5a32c20fbee56d496fbc239cad6b949797dddf7c6d9f23c48100c5b2b5dc41e1f
   languageName: node
   linkType: hard
 
@@ -2524,19 +2515,18 @@ __metadata:
     "@radix-ui/react-scroll-area": "npm:^1.2.9"
     "@radix-ui/react-slot": "npm:^1.2.3"
     "@tailwindcss/vite": "npm:^4.1.11"
-    "@tauri-apps/api": "npm:^2.6.0"
+    "@tauri-apps/api": "npm:^2.7.0"
     "@tauri-apps/cli": "npm:^2.6.2"
-    "@tauri-apps/plugin-dialog": "npm:^2.3.0"
-    "@tauri-apps/plugin-fs": "npm:^2.4.0"
-    "@tauri-apps/plugin-http": "npm:^2.5.0"
+    "@tauri-apps/plugin-dialog": "npm:^2.3.1"
+    "@tauri-apps/plugin-fs": "npm:^2.4.1"
+    "@tauri-apps/plugin-http": "npm:^2.5.1"
     "@tauri-apps/plugin-shell": "npm:^2.3.0"
-    "@tauri-apps/plugin-upload": "npm:^2.3.0"
     "@trivago/prettier-plugin-sort-imports": "npm:^5.2.2"
-    "@types/m3u8-parser": "npm:^7.2.2"
+    "@types/m3u8-parser": "npm:^7.2.3"
     "@types/node": "npm:^24.0.14"
     "@types/react": "npm:^19.1.8"
     "@types/react-dom": "npm:^19.1.6"
-    "@vitejs/plugin-react": "npm:^4.6.0"
+    "@vitejs/plugin-react": "npm:^4.7.0"
     babel-plugin-react-compiler: "npm:^19.1.0-rc.2"
     class-variance-authority: "npm:^0.7.1"
     clsx: "npm:^2.1.1"
@@ -2556,7 +2546,7 @@ __metadata:
     tailwindcss: "npm:^4.1.11"
     tw-animate-css: "npm:^1.3.5"
     typescript: "npm:~5.8.3"
-    vite: "npm:^7.0.4"
+    vite: "npm:^7.0.5"
     zod: "npm:^4.0.5"
   dependenciesMeta:
     "@prettier/plugin-oxc@0.0.4":
@@ -3503,9 +3493,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vite@npm:^7.0.4":
-  version: 7.0.4
-  resolution: "vite@npm:7.0.4"
+"vite@npm:^7.0.5":
+  version: 7.0.5
+  resolution: "vite@npm:7.0.5"
   dependencies:
     esbuild: "npm:^0.25.0"
     fdir: "npm:^6.4.6"
@@ -3554,7 +3544,7 @@ __metadata:
       optional: true
   bin:
     vite: bin/vite.js
-  checksum: 10/e5609e6b67658d0f4bb807d21290c515e3a1c2e085aa9507404f17d836a5b830d0a8bff36f67a0509361044843c9ccb4a0b7033a511dfb5d1dc5ded49aedaa91
+  checksum: 10/7429198ee4a62badb20691356425b5b98fe87be82108748c3b3661487868fdc647c3fbb2bb1fe1803aea8e72f1a6494815fc53bf6c329b61c6784f5f2273e9eb
   languageName: node
   linkType: hard
 
