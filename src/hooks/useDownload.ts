@@ -12,7 +12,7 @@ import { fetch } from '@tauri-apps/plugin-http';
 import { Command } from '@tauri-apps/plugin-shell';
 import { Parser, type Segment } from 'm3u8-parser';
 import pLimit from 'p-limit';
-import { retry } from 'radashi';
+import { retry, timeout } from 'radashi';
 import { useCallback, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { z } from 'zod/v4-mini';
@@ -56,8 +56,11 @@ const downloadM3u8 = async (
     text = await readTextFile(path);
   } catch (e) {
     console.debug('Downloading', url);
-    const response = await fetch(url, { connectTimeout: 30000, keepalive: true, signal });
-    text = await response.text();
+    const resp = await Promise.race([
+      fetch(url, { connectTimeout: 30000, keepalive: true, signal }),
+      timeout(3 * 60 * 1000),
+    ]);
+    text = await resp.text();
 
     await writeTextFile(path, text);
   }
@@ -103,9 +106,12 @@ const downloadSegments = async (
           });
 
           // 下载
-          await retry({ times: 10, backoff: (c) => 2 ** c, signal }, async () => {
+          await retry({ times: 10, delay: 3000, signal }, async () => {
             console.debug('Downloading', url.toString());
-            const resp = await fetch(url, { connectTimeout: 30000, keepalive: true, signal });
+            const resp = await Promise.race([
+              fetch(url, { connectTimeout: 30000, keepalive: true, signal }),
+              timeout(3 * 60 * 1000),
+            ]);
 
             if (resp.body) {
               const bytes = await resp.bytes();
