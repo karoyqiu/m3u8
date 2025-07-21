@@ -53,6 +53,7 @@ function App() {
   }, []);
 
   const onEnd = useCallback(() => {
+    window.localStorage.removeItem('url');
     appWindow.setProgressBar({ status: ProgressBarStatus.None });
   }, []);
 

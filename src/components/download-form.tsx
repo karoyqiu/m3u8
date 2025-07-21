@@ -12,19 +12,19 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { type DownloadParams, downloadParamsSchema, type useDownload } from '@/hooks/useDownload';
+import { useLocalStorage } from '@mantine/hooks';
 
 type DownloadFormProps = Pick<ReturnType<typeof useDownload>, 'downloading' | 'download'> & {
   id: string;
 };
 
 export default function DownloadForm(props: DownloadFormProps) {
+  const [url, setUrl] = useLocalStorage<DownloadParams>({ key: 'url' });
+
   const { id, downloading, download } = props;
   const form = useForm<DownloadParams>({
     resolver: standardSchemaResolver(downloadParamsSchema),
-    defaultValues: {
-      url: '',
-      filename: '',
-    },
+    defaultValues: url,
   });
 
   return (
@@ -33,7 +33,10 @@ export default function DownloadForm(props: DownloadFormProps) {
         id={id}
         className="flex flex-col gap-6"
         autoComplete="off"
-        onSubmit={form.handleSubmit(download)}
+        onSubmit={form.handleSubmit(async (values) => {
+          setUrl(values);
+          await download(values);
+        })}
       >
         <FormField
           control={form.control}
