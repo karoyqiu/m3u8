@@ -33,7 +33,7 @@ const settingsSchema = z.object({
 type ValuesType = z.infer<typeof settingsSchema>;
 
 export default function SettingsDialog() {
-  const [dir, setDir] = useLocalStorage({ key: 'dir' });
+  const [dir, setDir] = useLocalStorage({ key: 'dir', getInitialValueInEffect: false });
   const form = useForm<ValuesType>({
     resolver: standardSchemaResolver(settingsSchema),
     defaultValues: {

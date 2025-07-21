@@ -1,9 +1,16 @@
 import { readLocalStorageValue } from '@mantine/hooks';
 import { join } from '@tauri-apps/api/path';
-import { exists, mkdir, remove, rename, writeTextFile } from '@tauri-apps/plugin-fs';
+import {
+  exists,
+  mkdir,
+  readTextFile,
+  remove,
+  rename,
+  writeFile,
+  writeTextFile,
+} from '@tauri-apps/plugin-fs';
 import { fetch } from '@tauri-apps/plugin-http';
 import { Command } from '@tauri-apps/plugin-shell';
-import { download as downloadAs } from '@tauri-apps/plugin-upload';
 import { Parser, type Segment } from 'm3u8-parser';
 import pLimit from 'p-limit';
 import { retry } from 'radashi';
@@ -33,10 +40,28 @@ const hash = async (s: string) => {
   return array.map((b) => b.toString(16).padStart(2, '0')).join('');
 };
 
-const downloadM3u8 = async (url: URL, signal?: AbortSignal) => {
-  console.debug('Downloading', url);
-  const response = await fetch(url, { signal, connectTimeout: 30000 });
-  const text = await response.text();
+const downloadM3u8 = async (
+  url: URL,
+  dir: string,
+  filename: string,
+  m3u8Filename: string,
+  signal?: AbortSignal,
+) => {
+  const subdir = await join(dir, `.tmp-${filename}`);
+  await mkdir(subdir, { recursive: true });
+
+  const path = await join(subdir, m3u8Filename);
+  let text = '';
+
+  try {
+    text = await readTextFile(path);
+  } catch (e) {
+    console.debug('Downloading', url);
+    const response = await fetch(url, { signal, connectTimeout: 30000 });
+    text = await response.text();
+
+    await writeTextFile(path, text);
+  }
 
   const parser = new Parser();
   parser.push(text);
@@ -54,7 +79,6 @@ const downloadSegments = async (
 ) => {
   const { onStart, onDownload, onMerge, onEnd } = props;
   const subdir = await join(dir, `.tmp-${filename}`);
-  await mkdir(subdir, { recursive: true });
 
   console.info(`Downloading ${segments.length} segments`);
   onStart(segments.map((seg) => seg.uri));
@@ -76,7 +100,6 @@ const downloadSegments = async (
             index,
             downloaded: 1,
             total: 1,
-            speed: 0,
           });
           return;
         }
@@ -87,24 +110,29 @@ const downloadSegments = async (
           index,
           downloaded: 1,
           total: 100,
-          speed: 0,
         });
 
         // 下载
-        await retry({ times: 10, backoff: (c) => 2 ** c, signal }, () => {
+        await retry({ times: 10, backoff: (c) => 2 ** c, signal }, async () => {
           console.debug('Downloading', url.toString());
-          return downloadAs(url.toString(), temp, (progress) =>
-            onDownload({
-              index,
-              downloaded: progress.progressTotal,
-              total: progress.total,
-              speed: progress.transferSpeed,
-            }),
-          );
+          const resp = await fetch(url, { signal, connectTimeout: 30000 });
+
+          if (resp.body) {
+            const bytes = await resp.bytes();
+            await writeFile(temp, bytes);
+          } else {
+            console.warn(`No body for index ${index}`);
+          }
         });
 
         // 下载完成，重命名文件
         await rename(temp, file);
+
+        onDownload({
+          index,
+          downloaded: 100,
+          total: 100,
+        });
       }),
     ),
   );
@@ -200,7 +228,6 @@ export type DownloadProgress = {
   index: number;
   downloaded: number;
   total: number;
-  speed: number;
 };
 
 export type DownloadSegment = Omit<DownloadProgress, 'index'> & {
@@ -230,7 +257,7 @@ export const useDownload = (props: UseDownloadProps) => {
 
         console.info('Downloading top level playlist');
         ctrl.current = new AbortController();
-        const file = await downloadM3u8(url, ctrl.current.signal);
+        const file = await downloadM3u8(url, dir, filename, 'playlist.m3u8', ctrl.current.signal);
         console.debug('m3u8', file);
 
         if (file.playlists && file.playlists.length > 0) {
@@ -251,7 +278,13 @@ export const useDownload = (props: UseDownloadProps) => {
 
           /// @ts-expect-error: 为啥没定义这个
           const bestUrl = new URL(best.uri as string, url);
-          const bestFile = await downloadM3u8(bestUrl, ctrl.current.signal);
+          const bestFile = await downloadM3u8(
+            bestUrl,
+            dir,
+            filename,
+            'best.m3u8',
+            ctrl.current.signal,
+          );
           console.debug('Best m3u8', bestFile);
 
           await downloadSegments(

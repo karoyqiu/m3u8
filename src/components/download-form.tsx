@@ -1,4 +1,5 @@
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema';
+import { useLocalStorage } from '@mantine/hooks';
 import { useForm } from 'react-hook-form';
 
 import {
@@ -12,15 +13,16 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { type DownloadParams, downloadParamsSchema, type useDownload } from '@/hooks/useDownload';
-import { useLocalStorage } from '@mantine/hooks';
 
 type DownloadFormProps = Pick<ReturnType<typeof useDownload>, 'downloading' | 'download'> & {
   id: string;
 };
 
 export default function DownloadForm(props: DownloadFormProps) {
-  const [url, setUrl] = useLocalStorage<DownloadParams>({ key: 'url' });
-
+  const [url, setUrl] = useLocalStorage<DownloadParams>({
+    key: 'url',
+    getInitialValueInEffect: false,
+  });
   const { id, downloading, download } = props;
   const form = useForm<DownloadParams>({
     resolver: standardSchemaResolver(downloadParamsSchema),
