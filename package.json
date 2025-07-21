@@ -8,7 +8,7 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "format": "prettier -w --cache src",
+    "format": "prettier -w --cache --cache-strategy metadata src",
     "lint": "oxlint --fix src",
     "ui": "yarn dlx shadcn@latest",
     "vscode": "yarn dlx @yarnpkg/sdks vscode"

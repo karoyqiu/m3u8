@@ -1,4 +1,5 @@
 import { useElementSize } from '@mantine/hooks';
+import { ProgressBarStatus, getCurrentWindow } from '@tauri-apps/api/window';
 import { DownloadIcon, SquareIcon } from 'lucide-react';
 import { useCallback, useId, useState } from 'react';
 
@@ -11,7 +12,6 @@ import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Toaster } from '@/components/ui/sonner';
 import { type DownloadProgress, type DownloadSegment, useDownload } from '@/hooks/useDownload';
-import { ProgressBarStatus, getCurrentWindow } from '@tauri-apps/api/window';
 
 const appWindow = getCurrentWindow();
 
@@ -25,7 +25,7 @@ function App() {
       status: value === 0 ? ProgressBarStatus.Indeterminate : ProgressBarStatus.Normal,
       progress: value,
     });
-  }
+  };
 
   const onStart = useCallback((segs: string[]) => {
     updateProgress(0);
@@ -85,7 +85,7 @@ function App() {
           <SettingsDialog />
         </div>
         <Progress className="shrink-0" value={progress} />
-        <ScrollArea className="min-h-0" ref={ref}>
+        <ScrollArea className="min-h-0" ref={ref} nonce="huahC9gksP5zq3dBQmX97mb9m5FEyGCt">
           <SegmentProgress width={width} segments={segments} />
         </ScrollArea>
       </main>

@@ -22,7 +22,14 @@
       "csp": {
         "default-src": ["'self'"],
         "connect-src": ["'self'", "ipc:", "http://ipc.localhost", "https://ipc.localhost"],
-        "img-src": ["'self'", "https:", "data:"]
+        "img-src": ["'self'", "https:", "data:"],
+        "style-src": [
+          "'self'",
+          "'sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU='",
+          "'sha256-CIxDM5jnsGiKqXs2v7NKCY5MzdR9gu6TtiMJrDw29AY='",
+          "'sha256-vGQdhYJbTuF+M8iCn1IZCHpdkiICocWHDq4qnQF4Rjw='",
+          "'nonce-huahC9gksP5zq3dBQmX97mb9m5FEyGCt'"
+        ]
       }
     }
   },
