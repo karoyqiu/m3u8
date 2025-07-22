@@ -39,6 +39,11 @@ const hash = async (s: string) => {
   return array.map((b) => b.toString(16).padStart(2, '0')).join('');
 };
 
+const generateFileName = async (s: string) => {
+  const filename = await hash(s);
+  return `${filename}.mp4`;
+}
+
 const downloadM3u8 = async (
   url: URL,
   dir: string,
@@ -248,7 +253,7 @@ export const useDownload = (props: UseDownloadProps) => {
 
       try {
         const url = new URL(params.url);
-        const filename = params.filename || (await hash(params.url));
+        const filename = params.filename || (await generateFileName(params.url));
 
         console.info('Downloading top level playlist');
         ctrl.current = new AbortController();

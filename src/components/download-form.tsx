@@ -48,7 +48,7 @@ export default function DownloadForm(props: DownloadFormProps) {
             <FormItem>
               <FormLabel>URL</FormLabel>
               <FormControl>
-                <Input {...field} type="url" required />
+                <Input {...field} type="url" autoFocus required />
               </FormControl>
               <FormDescription>The URL of the m3u8 file.</FormDescription>
               <FormMessage />
