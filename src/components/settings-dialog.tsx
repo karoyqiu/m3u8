@@ -5,7 +5,7 @@ import { EllipsisIcon, SaveIcon, SettingsIcon } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod/v4-mini';
 
-import { Button } from '@/components/ui/button';
+import { Button, type ButtonProps } from '@/components/ui/button';
 import {
   Dialog,
   DialogClose,
@@ -32,7 +32,7 @@ const settingsSchema = z.object({
 });
 type ValuesType = z.infer<typeof settingsSchema>;
 
-export default function SettingsDialog() {
+export default function SettingsDialog(props: ButtonProps) {
   const [dir, setDir] = useLocalStorage({ key: 'dir', getInitialValueInEffect: false });
   const form = useForm<ValuesType>({
     resolver: standardSchemaResolver(settingsSchema),
@@ -49,7 +49,7 @@ export default function SettingsDialog() {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant="secondary" type="button">
+        <Button variant="secondary" type="button" {...props}>
           <SettingsIcon />
           Settings
         </Button>

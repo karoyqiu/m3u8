@@ -294,7 +294,7 @@ export const useDownload = (props: UseDownloadProps) => {
           await downloadSegments(url, file.segments, dir, filename, props, ctrl.current.signal);
         }
       } catch (e) {
-        console.error(e);
+        toast.error(`${e}`);
         ctrl.current?.abort(e);
       }
 

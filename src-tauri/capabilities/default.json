@@ -2,7 +2,9 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Capability for the main window",
-  "windows": ["main"],
+  "windows": [
+    "main"
+  ],
   "permissions": [
     "core:path:allow-join",
     "core:window:allow-set-progress-bar",
@@ -14,10 +16,15 @@
     "fs:allow-remove",
     "fs:allow-write-file",
     "fs:allow-write-text-file",
+    "process:allow-restart",
     "shell:allow-kill",
     {
       "identifier": "http:default",
-      "allow": [{ "url": "https://*" }]
+      "allow": [
+        {
+          "url": "https://*"
+        }
+      ]
     },
     {
       "identifier": "shell:allow-spawn",

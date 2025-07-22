@@ -1,6 +1,7 @@
 import { useElementSize } from '@mantine/hooks';
 import { ProgressBarStatus, getCurrentWindow } from '@tauri-apps/api/window';
-import { DownloadIcon, SquareIcon } from 'lucide-react';
+import { relaunch } from '@tauri-apps/plugin-process';
+import { DownloadIcon, RotateCcwIcon, SquareIcon } from 'lucide-react';
 import { useCallback, useEffect, useId, useState } from 'react';
 
 import '@/App.css';
@@ -87,7 +88,11 @@ function App() {
               Download
             </Button>
           )}
-          <SettingsDialog />
+          <SettingsDialog className="ms-auto" />
+          <Button variant="secondary" onClick={relaunch}>
+            <RotateCcwIcon />
+            Restart
+          </Button>
         </div>
         <Progress className="shrink-0" value={progress} />
         <ScrollArea className="min-h-0" ref={ref} nonce="huahC9gksP5zq3dBQmX97mb9m5FEyGCt">
