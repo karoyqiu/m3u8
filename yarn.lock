@@ -2542,6 +2542,7 @@ __metadata:
     clsx: "npm:^2.1.1"
     lucide-react: "npm:^0.525.0"
     m3u8-parser: "npm:^7.2.0"
+    memoize-one: "npm:^6.0.0"
     oxlint: "npm:^1.7.0"
     p-limit: "npm:^6.2.0"
     prettier: "npm:^3.6.2"
@@ -2595,6 +2596,13 @@ __metadata:
     promise-retry: "npm:^2.0.1"
     ssri: "npm:^12.0.0"
   checksum: 10/fce0385840b6d86b735053dfe941edc2dd6468fda80fe74da1eeff10cbd82a75760f406194f2bc2fa85b99545b2bc1f84c08ddf994b21830775ba2d1a87e8bdf
+  languageName: node
+  linkType: hard
+
+"memoize-one@npm:^6.0.0":
+  version: 6.0.0
+  resolution: "memoize-one@npm:6.0.0"
+  checksum: 10/28feaf7e9a870efef1187df110b876ce42deaf86c955f4111d72d23b96e44eed573469316e6ad0d2cc7fa3b1526978215617b126158015f957242c7493babca9
   languageName: node
   linkType: hard
 

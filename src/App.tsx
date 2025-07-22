@@ -9,24 +9,22 @@ import DownloadForm from '@/components/download-form';
 import SegmentProgress from '@/components/segment-progress';
 import SettingsDialog from '@/components/settings-dialog';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Toaster } from '@/components/ui/sonner';
 import { type DownloadProgress, type DownloadSegment, useDownload } from '@/hooks/useDownload';
 
 const appWindow = getCurrentWindow();
 
-function App() {
-  const [progress, setProgress] = useState(0);
-  const [segments, setSegments] = useState<DownloadSegment[]>([]);
+const updateProgress = (value: number) => {
+  appWindow.setProgressBar({
+    status: value === 0 ? ProgressBarStatus.Indeterminate : ProgressBarStatus.Normal,
+    progress: value || undefined,
+  });
+};
 
-  const updateProgress = (value: number) => {
-    setProgress(value);
-    appWindow.setProgressBar({
-      status: value === 0 ? ProgressBarStatus.Indeterminate : ProgressBarStatus.Normal,
-      progress: value,
-    });
-  };
+function App() {
+  const [segments, setSegments] = useState<DownloadSegment[]>([]);
+  const [merging, setMerging] = useState(0);
 
   const onStart = useCallback((segs: string[]) => {
     updateProgress(0);
@@ -53,6 +51,11 @@ function App() {
     });
   }, []);
 
+  const onMerge = useCallback((percent: number) => {
+    setMerging(percent);
+    updateProgress(Math.floor(percent * 100));
+  }, []);
+
   const onEnd = useCallback(() => {
     window.localStorage.removeItem('url');
     appWindow.setProgressBar({ status: ProgressBarStatus.None });
@@ -61,7 +64,7 @@ function App() {
   const { downloading, download, abort } = useDownload({
     onStart,
     onDownload,
-    onMerge: updateProgress,
+    onMerge,
     onEnd,
   });
 
@@ -94,9 +97,8 @@ function App() {
             Restart
           </Button>
         </div>
-        <Progress className="shrink-0" value={progress} />
         <ScrollArea className="min-h-0" ref={ref} nonce="huahC9gksP5zq3dBQmX97mb9m5FEyGCt">
-          <SegmentProgress width={width} segments={segments} />
+          <SegmentProgress width={width} segments={segments} merging={merging} />
         </ScrollArea>
       </main>
       <Toaster richColors />

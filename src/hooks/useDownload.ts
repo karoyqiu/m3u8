@@ -42,7 +42,7 @@ const hash = async (s: string) => {
 const generateFileName = async (s: string) => {
   const filename = await hash(s);
   return `${filename}.mp4`;
-}
+};
 
 const downloadM3u8 = async (
   url: URL,
@@ -176,6 +176,8 @@ const mergeFiles = async (
   }
 
   onMerge(0);
+  duration *= 1_000_000;
+  const maxPercent = (segments.length - 1) / segments.length;
 
   const args = [
     '-y',
@@ -196,8 +198,8 @@ const mergeFiles = async (
   ffmpeg.stdout.on('data', (line) => {
     if (line.startsWith(OUT_TIME_US)) {
       const value = line.substring(OUT_TIME_US.length);
-      const seconds = (parseFloat(value) || 0) / 1000000;
-      const percent = Math.min(Math.round((seconds * 100) / duration), 99);
+      const us = parseFloat(value);
+      const percent = Math.min(us / duration, maxPercent);
       onMerge(percent);
     }
   });
@@ -215,7 +217,7 @@ const mergeFiles = async (
   }
 
   await waitForExit;
-  onMerge(100);
+  onMerge(1);
 };
 
 const waitForCommand = (command: Command<string>) =>
@@ -309,7 +311,7 @@ export const useDownload = (props: UseDownloadProps) => {
   );
 
   const abort = useCallback(() => {
-    ctrl?.current?.abort();
+    ctrl?.current?.abort('User aborted.');
   }, []);
 
   return { downloading, download, abort };
