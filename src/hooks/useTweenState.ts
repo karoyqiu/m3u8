@@ -314,7 +314,6 @@ export const useTweenState = (
 
       if (prev !== timestamp) {
         const v = easingFunction(elapsed, begin, final, duration);
-        console.debug('V =', v);
         setValue(v);
       }
 

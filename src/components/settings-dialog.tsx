@@ -42,7 +42,6 @@ export default function SettingsDialog(props: ButtonProps) {
   });
 
   function onSubmit(values: ValuesType) {
-    console.log(values);
     setDir(values.dir);
   }
 
