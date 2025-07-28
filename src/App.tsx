@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Toaster } from '@/components/ui/sonner';
 import { type DownloadProgress, type DownloadSegment, useDownload } from '@/hooks/useDownload';
+import { useTweenState } from '@/hooks/useTweenState';
 
 const appWindow = getCurrentWindow();
 
@@ -24,13 +25,11 @@ const updateProgress = (value: number) => {
 
 function App() {
   const [segments, setSegments] = useState<DownloadSegment[]>([]);
-  const [merging, setMerging] = useState(0);
+  const [merging, setMerging] = useTweenState(0);
 
   const onStart = useCallback((segs: string[]) => {
     updateProgress(0);
-    setSegments(
-      segs.map((seg) => ({ _id: seg, segment: seg, downloaded: 0, total: 100, speed: 0 })),
-    );
+    setSegments(segs.map((seg) => ({ _id: seg, segment: seg, downloaded: 0, total: 100 })));
   }, []);
 
   const onDownload = useCallback((progress: DownloadProgress) => {
@@ -54,7 +53,7 @@ function App() {
   const onMerge = useCallback((percent: number) => {
     setMerging(percent);
     updateProgress(Math.floor(percent * 100));
-  }, []);
+  }, [setMerging]);
 
   const onEnd = useCallback(() => {
     window.localStorage.removeItem('url');

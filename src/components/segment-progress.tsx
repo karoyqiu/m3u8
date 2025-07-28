@@ -1,7 +1,7 @@
+import memoizeOne from 'memoize-one';
 import { useEffect, useRef } from 'react';
 
 import type { DownloadSegment } from '@/hooks/useDownload';
-import memoizeOne from 'memoize-one';
 
 // 块大小
 const blockSize = 12;
@@ -10,16 +10,19 @@ const gap = 2;
 // 包含间隙的块大小
 const fullBlockSize = blockSize + gap;
 
-const getColors = memoizeOne((elem: Element) => {
-  // 要使用的颜色
-  const style = getComputedStyle(elem);
-  const primary = style.getPropertyValue('--primary');
-  const gray = style.getPropertyValue('--secondary');
-  const green = style.getPropertyValue('--color-green-700');
-  const yellow = style.getPropertyValue('--color-yellow-500');
+const getColors = memoizeOne(
+  (elem: Element) => {
+    // 要使用的颜色
+    const style = getComputedStyle(elem);
+    const primary = style.getPropertyValue('--primary');
+    const gray = style.getPropertyValue('--secondary');
+    const green = style.getPropertyValue('--color-green-700');
+    const yellow = style.getPropertyValue('--color-yellow-500');
 
-  return { primary, gray, green, yellow };
-}, () => true);
+    return { primary, gray, green, yellow };
+  },
+  () => true,
+);
 
 type SegmentProgressProps = {
   width: number;
