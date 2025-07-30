@@ -1,3 +1,4 @@
+import { useThrottledState } from '@mantine/hooks';
 import { type Dispatch, type SetStateAction, useEffect, useState } from 'react';
 
 // t: current time, b: beginning value, _c: final value, d: total duration
@@ -294,11 +295,11 @@ export const useTweenState = (
   initialValue: number,
   options?: UseTweenStateOptions,
 ): [number, Dispatch<SetStateAction<number>>] => {
+  const easingFunction = options?.easingFunction ?? easeOutCubic;
+  const duration = options?.duration ?? 500;
   const [begin, setBegin] = useState(initialValue);
   const [value, setValue] = useState(initialValue);
-  const [final, setFinalValue] = useState(initialValue);
-  const easingFunction = options?.easingFunction ?? easeInOutCubic;
-  const duration = options?.duration ?? 500;
+  const [final, setFinalValue] = useThrottledState(initialValue, duration + 50);
 
   useEffect(() => {
     let id = 0,
