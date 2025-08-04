@@ -29,6 +29,7 @@ function App() {
 
   const onStart = useCallback((segs: string[]) => {
     updateProgress(0);
+    setMerging(0);
     setSegments(segs.map((seg) => ({ _id: seg, segment: seg, downloaded: 0, total: 100 })));
   }, []);
 

@@ -10,9 +10,10 @@ import {
 } from '@tauri-apps/plugin-fs';
 import { fetch } from '@tauri-apps/plugin-http';
 import { Command } from '@tauri-apps/plugin-shell';
+import memoizeOne from 'async-memoize-one';
 import { Parser, type Segment } from 'm3u8-parser';
 import pLimit from 'p-limit';
-import { retry, timeout } from 'radashi';
+import { last, retry, timeout } from 'radashi';
 import { useCallback, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { z } from 'zod/v4-mini';
@@ -76,6 +77,17 @@ const downloadM3u8 = async (
   return parser.manifest;
 };
 
+const downloadKey = memoizeOne(async (url: string, signal?: AbortSignal) => {
+  const resp = await fetch(url, { connectTimeout: 30000, keepalive: true, signal });
+  const bytes = await resp.bytes();
+  return crypto.subtle.importKey('raw', bytes, { name: 'AES-CBC' }, false, ['decrypt']);
+});
+
+const getFilename = (url: URL) => {
+  const segs = url.pathname.split('/');
+  return last(segs);
+}
+
 const downloadSegments = async (
   baseUrl: URL,
   segments: Segment[],
@@ -91,6 +103,10 @@ const downloadSegments = async (
   onStart(segments.map((seg) => seg.uri));
   const limit = pLimit(8);
 
+  if (segments[0].key?.uri) {
+    await downloadKey(segments[0].key.uri, signal);
+  }
+
   await Promise.all(
     segments.map((seg, index) =>
       limit(async () => {
@@ -99,7 +115,7 @@ const downloadSegments = async (
         }
 
         const url = new URL(seg.uri, baseUrl);
-        const file = await join(subdir, seg.uri);
+        const file = await join(subdir, getFilename(url) ?? seg.uri);
 
         // 如果文件存在，则跳过
         if (!(await exists(file))) {
@@ -119,7 +135,18 @@ const downloadSegments = async (
             ]);
 
             if (resp.body) {
-              const bytes = await resp.bytes();
+              let bytes = await resp.bytes();
+
+              if (seg.key?.method) {
+                if (seg.key.method === 'AES-128') {
+                  const key = await downloadKey(seg.key.uri, signal);
+                  const decrypted = await crypto.subtle.decrypt({ name: 'AES-CBC', iv: seg.key.iv }, key, bytes);
+                  bytes = new Uint8Array(decrypted);
+                } else {
+                  console.warn(`Unsupported encryption method: ${seg.key.method}`);
+                }
+              }
+
               await writeFile(file, bytes);
             } else {
               console.warn(`No body for index ${index}`);
@@ -137,7 +164,7 @@ const downloadSegments = async (
     ),
   );
 
-  await mergeFiles(subdir, filename, segments, onMerge, signal);
+  await mergeFiles(subdir, filename, baseUrl, segments, onMerge, signal);
 
   console.info('Cleaning up');
   await remove(subdir, { recursive: true });
@@ -151,6 +178,7 @@ const OUT_TIME_US = 'out_time_us=';
 const mergeFiles = async (
   subdir: string,
   filename: string,
+  baseUrl: URL,
   segments: Segment[],
   onMerge: (percent: number) => void,
   signal?: AbortSignal,
@@ -165,7 +193,9 @@ const mergeFiles = async (
   let duration = 0;
 
   for (const seg of segments) {
-    filelist.push(`file '${seg.uri}'`);
+    const url = new URL(seg.uri, baseUrl);
+    const file = getFilename(url) ?? seg.uri;
+    filelist.push(`file '${file}'`);
     duration += seg.duration;
   }
 
@@ -202,6 +232,9 @@ const mergeFiles = async (
       const percent = Math.min(us / duration, maxPercent);
       onMerge(percent);
     }
+  });
+  ffmpeg.stderr.on('data', (line) => {
+    console.warn('ffmpeg stderr', line);
   });
 
   const waitForExit = waitForCommand(ffmpeg);
@@ -306,6 +339,7 @@ export const useDownload = (props: UseDownloadProps) => {
       }
 
       setDownloading(false);
+      props.onEnd();
     },
     [props],
   );

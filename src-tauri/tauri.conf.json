@@ -16,7 +16,8 @@
         "center": true,
         "visible": false,
         "width": 560,
-        "height": 960
+        "height": 960,
+        "useHttpsScheme": true
       }
     ],
     "security": {
