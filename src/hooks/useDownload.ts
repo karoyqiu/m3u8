@@ -1,29 +1,12 @@
 import { readLocalStorageValue } from '@mantine/hooks';
-import { join } from '@tauri-apps/api/path';
-import {
-  exists,
-  mkdir,
-  readTextFile,
-  remove,
-  writeFile,
-  writeTextFile,
-} from '@tauri-apps/plugin-fs';
-import { fetch } from '@tauri-apps/plugin-http';
+import { remove } from '@tauri-apps/plugin-fs';
 import { Command } from '@tauri-apps/plugin-shell';
-import memoizeOne from 'async-memoize-one';
-import { Parser, type Segment } from 'm3u8-parser';
-import pLimit from 'p-limit';
-import { last, retry, timeout } from 'radashi';
 import { useCallback, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { z } from 'zod/v4-mini';
 
-type UseDownloadProps = {
-  onStart: (segments: string[]) => void;
-  onDownload: (progress: DownloadProgress) => void;
-  onMerge: (percent: number) => void;
-  onEnd: () => void;
-};
+const OUT_TIME_US = 'out_time_us=';
+const DURATION = '  Duration: ';
 
 export const downloadParamsSchema = z.object({
   /// 要下载的 URL
@@ -45,229 +28,30 @@ const generateFileName = async (s: string) => {
   return `${filename}.mp4`;
 };
 
-const downloadM3u8 = async (
-  url: URL,
-  dir: string,
-  filename: string,
-  m3u8Filename: string,
-  signal?: AbortSignal,
-) => {
-  const subdir = await join(dir, `.tmp-${filename}`);
-  await mkdir(subdir, { recursive: true });
-
-  const path = await join(subdir, m3u8Filename);
-  let text = '';
-
-  try {
-    text = await readTextFile(path);
-  } catch (e) {
-    console.debug('Downloading', url);
-    const resp = await Promise.race([
-      fetch(url, { connectTimeout: 30000, keepalive: true, signal }),
-      timeout(3 * 60 * 1000),
-    ]);
-    text = await resp.text();
-
-    await writeTextFile(path, text);
-  }
-
-  const parser = new Parser();
-  parser.push(text);
-  parser.end();
-  return parser.manifest;
-};
-
-const downloadKey = memoizeOne(async (url: string, signal?: AbortSignal) => {
-  const resp = await fetch(url, { connectTimeout: 30000, keepalive: true, signal });
-  const bytes = await resp.bytes();
-  return crypto.subtle.importKey('raw', bytes, { name: 'AES-CBC' }, false, ['decrypt']);
-});
-
-const getFilename = (url: URL) => {
-  const segs = url.pathname.split('/');
-  return last(segs);
-}
-
-const downloadSegments = async (
-  baseUrl: URL,
-  segments: Segment[],
-  dir: string,
-  filename: string,
-  props: UseDownloadProps,
-  signal?: AbortSignal,
-) => {
-  const { onStart, onDownload, onMerge, onEnd } = props;
-  const subdir = await join(dir, `.tmp-${filename}`);
-
-  console.info(`Downloading ${segments.length} segments`);
-  onStart(segments.map((seg) => seg.uri));
-  const limit = pLimit(8);
-
-  if (segments[0].key?.uri) {
-    await downloadKey(segments[0].key.uri, signal);
-  }
-
-  await Promise.all(
-    segments.map((seg, index) =>
-      limit(async () => {
-        if (signal?.aborted) {
-          return;
-        }
-
-        const url = new URL(seg.uri, baseUrl);
-        const file = await join(subdir, getFilename(url) ?? seg.uri);
-
-        // 如果文件存在，则跳过
-        if (!(await exists(file))) {
-          // 文件不存在
-          onDownload({
-            index,
-            downloaded: 1,
-            total: 100,
-          });
-
-          // 下载
-          await retry({ times: 10, delay: 3000, signal }, async () => {
-            console.debug('Downloading', url.toString());
-            const resp = await Promise.race([
-              fetch(url, { connectTimeout: 30000, keepalive: true, signal }),
-              timeout(3 * 60 * 1000),
-            ]);
-
-            if (resp.body) {
-              let bytes = await resp.bytes();
-
-              if (seg.key?.method) {
-                if (seg.key.method === 'AES-128') {
-                  const key = await downloadKey(seg.key.uri, signal);
-                  const decrypted = await crypto.subtle.decrypt({ name: 'AES-CBC', iv: seg.key.iv }, key, bytes);
-                  bytes = new Uint8Array(decrypted);
-                } else {
-                  console.warn(`Unsupported encryption method: ${seg.key.method}`);
-                }
-              }
-
-              await writeFile(file, bytes);
-            } else {
-              console.warn(`No body for index ${index}`);
-            }
-          });
-        }
-
-        // 下载完成
-        onDownload({
-          index,
-          downloaded: 100,
-          total: 100,
-        });
-      }),
-    ),
-  );
-
-  await mergeFiles(subdir, filename, baseUrl, segments, onMerge, signal);
-
-  console.info('Cleaning up');
-  await remove(subdir, { recursive: true });
-
-  console.info('All done');
-  onEnd();
-};
-
-const OUT_TIME_US = 'out_time_us=';
-
-const mergeFiles = async (
-  subdir: string,
-  filename: string,
-  baseUrl: URL,
-  segments: Segment[],
-  onMerge: (percent: number) => void,
-  signal?: AbortSignal,
-) => {
-  if (signal?.aborted) {
-    return;
-  }
-
-  console.info('Merging');
-  const filelistPath = await join(subdir, 'filelist.txt');
-  const filelist: string[] = [];
-  let duration = 0;
-
-  for (const seg of segments) {
-    const url = new URL(seg.uri, baseUrl);
-    const file = getFilename(url) ?? seg.uri;
-    filelist.push(`file '${file}'`);
-    duration += seg.duration;
-  }
-
-  await writeTextFile(filelistPath, filelist.join('\n'));
-
-  if (signal?.aborted) {
-    return;
-  }
-
-  onMerge(0);
-  duration *= 1_000_000;
-  const maxPercent = (segments.length - 1) / segments.length;
-
-  const args = [
-    '-y',
-    '-progress',
-    'pipe:1',
-    '-nostats',
-    '-loglevel',
-    'error',
-    '-f',
-    'concat',
-    '-i',
-    filelistPath,
-    '-c',
-    'copy',
-    `../${filename}`,
-  ];
-  const ffmpeg = Command.sidecar('binaries/ffmpeg', args, { cwd: subdir });
-  ffmpeg.stdout.on('data', (line) => {
-    if (line.startsWith(OUT_TIME_US)) {
-      const value = line.substring(OUT_TIME_US.length);
-      const us = parseFloat(value);
-      const percent = Math.min(us / duration, maxPercent);
-      onMerge(percent);
-    }
-  });
-  ffmpeg.stderr.on('data', (line) => {
-    console.warn('ffmpeg stderr', line);
-  });
-
-  const waitForExit = waitForCommand(ffmpeg);
-  const child = await ffmpeg.spawn();
-
-  if (signal) {
-    if (signal.aborted) {
-      child.kill();
-      return;
-    }
-
-    signal.addEventListener('abort', () => child.kill());
-  }
-
-  await waitForExit;
-  onMerge(1);
-};
-
 const waitForCommand = (command: Command<string>) =>
   new Promise((resolve, reject) => {
     command.once('close', resolve);
     command.once('error', reject);
   });
 
-export type DownloadProgress = {
-  index: number;
-  downloaded: number;
-  total: number;
+const parseDuration = (text: string) => {
+  const match = /(?<h>\d{2,}):(?<m>\d{2}):(?<s>\d{2}).(?<ms>\d{2})/.exec(text);
+
+  if (match?.groups) {
+    const h = parseInt(match.groups.h, 10);
+    const m = parseInt(match.groups.m, 10);
+    const s = parseInt(match.groups.s, 10);
+    const ms = parseInt(match.groups.ms, 10);
+    return h * 3600 + m * 60 + s + ms / 100;
+  }
+
+  return 0;
 };
 
-export type DownloadSegment = Omit<DownloadProgress, 'index'> & {
-  _id: string;
-  segment: string;
+type UseDownloadProps = {
+  onStart: () => void;
+  onDownload: (progress: number, total: number) => void;
+  onEnd: () => void;
 };
 
 export const useDownload = (props: UseDownloadProps) => {
@@ -284,64 +68,67 @@ export const useDownload = (props: UseDownloadProps) => {
       }
 
       setDownloading(true);
-      props.onStart([]);
+      props.onStart();
+
+      const filename = params.filename || (await generateFileName(params.url));
 
       try {
-        const url = new URL(params.url);
-        const filename = params.filename || (await generateFileName(params.url));
+        let duration = 1;
 
-        console.info('Downloading top level playlist');
+        // 直接调用 ffmpeg
+        const args = [
+          '-y',
+          '-progress',
+          'pipe:1',
+          '-hide_banner',
+          '-allowed_extensions',
+          'ALL',
+          '-extension_picky',
+          'false',
+          '-i',
+          params.url,
+          '-c',
+          'copy',
+          filename,
+        ];
+        const ffmpeg = Command.sidecar('binaries/ffmpeg', args, { cwd: dir });
         ctrl.current = new AbortController();
-        const file = await downloadM3u8(url, dir, filename, 'playlist.m3u8', ctrl.current.signal);
-        console.debug('m3u8', file);
 
-        if (file.playlists && file.playlists.length > 0) {
-          // 播放列表，查找最佳分辨率
-          type Resolution = {
-            width: number;
-            height: number;
-          };
-          file.playlists.sort((a, b) => {
-            const ar = a.attributes.RESOLUTION as Resolution;
-            const br = b.attributes.RESOLUTION as Resolution;
-            return br.height - ar.height;
-          });
+        ffmpeg.stdout.on('data', (line) => {
+          if (line.startsWith(OUT_TIME_US)) {
+            const value = line.substring(OUT_TIME_US.length);
+            const us = parseFloat(value);
+            props.onDownload(us / 1_000_000, duration);
+          }
+        });
+        ffmpeg.stderr.on('data', (line) => {
+          if (line.startsWith(DURATION)) {
+            const comma = line.indexOf(',');
+            const dur = line.substring(DURATION.length, comma);
+            duration = parseDuration(dur);
+          }
+        });
 
-          console.info('Downloading the best playlist');
-          const best = file.playlists[0];
-          console.debug('Best', file.playlists[0]);
+        const waitForExit = waitForCommand(ffmpeg);
+        const child = await ffmpeg.spawn();
 
-          /// @ts-expect-error: 为啥没定义这个
-          const bestUrl = new URL(best.uri as string, url);
-          const bestFile = await downloadM3u8(
-            bestUrl,
-            dir,
-            filename,
-            'best.m3u8',
-            ctrl.current.signal,
-          );
-          console.debug('Best m3u8', bestFile);
-
-          await downloadSegments(
-            bestUrl,
-            bestFile.segments,
-            dir,
-            filename,
-            props,
-            ctrl.current.signal,
-          );
-        } else {
-          await downloadSegments(url, file.segments, dir, filename, props, ctrl.current.signal);
+        if (ctrl.current.signal.aborted) {
+          child.kill();
+          return;
         }
+
+        ctrl.current.signal.addEventListener('abort', () => child.kill());
+
+        await waitForExit;
       } catch (e) {
         toast.error(`${e}`);
-        ctrl.current?.abort(e);
+        await remove(filename);
       }
 
       setDownloading(false);
       props.onEnd();
     },
-    [props],
+    [props.onStart, props.onDownload, props.onEnd],
   );
 
   const abort = useCallback(() => {

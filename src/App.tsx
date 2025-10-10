@@ -11,50 +11,32 @@ import SettingsDialog from '@/components/settings-dialog';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Toaster } from '@/components/ui/sonner';
-import { type DownloadProgress, type DownloadSegment, useDownload } from '@/hooks/useDownload';
-import { useTweenState } from '@/hooks/useTweenState';
+import { useDownload } from '@/hooks/useDownload';
 
 const appWindow = getCurrentWindow();
 
 const updateProgress = (value: number) => {
   appWindow.setProgressBar({
-    status: value === 0 ? ProgressBarStatus.Indeterminate : ProgressBarStatus.Normal,
-    progress: value || undefined,
+    status: value < 0 ? ProgressBarStatus.Indeterminate : ProgressBarStatus.Normal,
+    progress: value < 0 ? undefined : Math.max(value, 1),
   });
 };
 
 function App() {
-  const [segments, setSegments] = useState<DownloadSegment[]>([]);
-  const [merging, setMerging] = useTweenState(0);
+  const [total, setTotal] = useState(0);
+  const [progress, setProgress] = useState(0);
 
-  const onStart = useCallback((segs: string[]) => {
-    updateProgress(0);
-    setMerging(0);
-    setSegments(segs.map((seg) => ({ _id: seg, segment: seg, downloaded: 0, total: 100 })));
+  const onStart = useCallback(() => {
+    setProgress(0);
+    setTotal(0);
+    updateProgress(-1);
   }, []);
 
-  const onDownload = useCallback((progress: DownloadProgress) => {
-    const { index, ...rest } = progress;
-    setSegments((old) => {
-      const segs = old.toSpliced(index, 1, {
-        ...old[index],
-        ...rest,
-      });
-
-      const finished = segs.reduce(
-        (prev, seg) => (seg.downloaded === seg.total ? prev + 1 : prev),
-        0,
-      );
-      updateProgress(Math.round((finished * 100) / segs.length));
-
-      return segs;
-    });
+  const onDownload = useCallback((value: number, t: number) => {
+    setProgress(value);
+    setTotal(t);
+    updateProgress(Math.round((value * 100) / t));
   }, []);
-
-  const onMerge = useCallback((percent: number) => {
-    setMerging(percent);
-    updateProgress(Math.floor(percent * 100));
-  }, [setMerging]);
 
   const onEnd = useCallback(() => {
     window.localStorage.removeItem('url');
@@ -64,7 +46,6 @@ function App() {
   const { downloading, download, abort } = useDownload({
     onStart,
     onDownload,
-    onMerge,
     onEnd,
   });
 
@@ -98,7 +79,7 @@ function App() {
           </Button>
         </div>
         <ScrollArea className="min-h-0" ref={ref} nonce="huahC9gksP5zq3dBQmX97mb9m5FEyGCt">
-          <SegmentProgress width={width} segments={segments} merging={merging} />
+          <SegmentProgress {...{ width, total, progress }} />
         </ScrollArea>
       </main>
       <Toaster richColors />
