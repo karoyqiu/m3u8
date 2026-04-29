@@ -86,6 +86,10 @@ export const useDownload = (props: UseDownloadProps) => {
           'ALL',
           '-extension_picky',
           'false',
+          '-reconnect',
+          '1',
+          '-reconnect_streamed',
+          '1',
         ];
 
         if (params.referer) {
