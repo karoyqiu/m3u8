@@ -19,14 +19,14 @@ type DownloadFormProps = Pick<ReturnType<typeof useDownload>, 'downloading' | 'd
 };
 
 export default function DownloadForm(props: DownloadFormProps) {
-  const [url, setUrl] = useLocalStorage<DownloadParams>({
+  const [values, setValues] = useLocalStorage<DownloadParams>({
     key: 'url',
     getInitialValueInEffect: false,
   });
   const { id, downloading, download } = props;
   const form = useForm<DownloadParams>({
     resolver: standardSchemaResolver(downloadParamsSchema),
-    defaultValues: url,
+    defaultValues: values,
   });
 
   return (
@@ -36,7 +36,7 @@ export default function DownloadForm(props: DownloadFormProps) {
         className="flex flex-col gap-6"
         autoComplete="off"
         onSubmit={form.handleSubmit(async (values) => {
-          setUrl(values);
+          setValues(values);
           await download(values);
         })}
       >
@@ -66,6 +66,21 @@ export default function DownloadForm(props: DownloadFormProps) {
                 <Input {...field} placeholder="Optional" />
               </FormControl>
               <FormDescription>The optional filename of the downloaded file.</FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="referer"
+          disabled={downloading}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Referer</FormLabel>
+              <FormControl>
+                <Input {...field} placeholder="Optional" />
+              </FormControl>
+              <FormDescription>The Referer header to send when downloading.</FormDescription>
               <FormMessage />
             </FormItem>
           )}

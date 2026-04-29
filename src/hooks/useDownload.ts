@@ -13,6 +13,8 @@ export const downloadParamsSchema = z.object({
   url: z.url(),
   /// 要保存的文件名
   filename: z.optional(z.string()),
+  /// Referer 请求头
+  referer: z.optional(z.string()),
 });
 export type DownloadParams = z.infer<typeof downloadParamsSchema>;
 
@@ -75,7 +77,6 @@ export const useDownload = (props: UseDownloadProps) => {
       try {
         let duration = 1;
 
-        // 直接调用 ffmpeg
         const args = [
           '-y',
           '-progress',
@@ -85,12 +86,13 @@ export const useDownload = (props: UseDownloadProps) => {
           'ALL',
           '-extension_picky',
           'false',
-          '-i',
-          params.url,
-          '-c',
-          'copy',
-          filename,
         ];
+
+        if (params.referer) {
+          args.push('-headers', `Referer: ${params.referer}`);
+        }
+
+        args.push('-i', params.url, '-c', 'copy', filename);
         const ffmpeg = Command.sidecar('binaries/ffmpeg', args, { cwd: dir });
         ctrl.current = new AbortController();
 
