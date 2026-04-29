@@ -17,25 +17,7 @@
         {
           "sidecar": true,
           "name": "binaries/ffmpeg",
-          "args": [
-            "-y",
-            "-progress",
-            "pipe:1",
-            "-hide_banner",
-            "-allowed_extensions",
-            "ALL",
-            "-extension_picky",
-            "false",
-            "-i",
-            {
-              "validator": ".+"
-            },
-            "-c",
-            "copy",
-            {
-              "validator": ".+"
-            }
-          ]
+          "args": true
         }
       ]
     }

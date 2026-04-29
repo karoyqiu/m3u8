@@ -89,7 +89,7 @@ export const useDownload = (props: UseDownloadProps) => {
         ];
 
         if (params.referer) {
-          args.push('-headers', `Referer: ${params.referer}`);
+          args.push('-referer', params.referer);
         }
 
         args.push('-i', params.url, '-c', 'copy', filename);
