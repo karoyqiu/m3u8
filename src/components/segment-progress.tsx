@@ -64,7 +64,7 @@ export default function SegmentProgress(props: SegmentProgressProps) {
       for (let i = 0; i < segments; i++) {
         const { x, y } = calcPos(i);
 
-        if (i <= value) {
+        if (i < value) {
           greens.roundRect(x, y, blockSize, blockSize, 2);
         } else {
           grays.roundRect(x, y, blockSize, blockSize, 2);

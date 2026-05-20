@@ -27,8 +27,11 @@ const generateFileName = async (s: string) => {
 };
 
 const waitForCommand = (command: Command<string>) =>
-  new Promise((resolve, reject) => {
-    command.once('close', resolve);
+  new Promise<void>((resolve, reject) => {
+    command.once('close', (data) => {
+      if (data.code !== 0) reject(new Error(`yt-dlp exited with code ${data.code}`));
+      else resolve();
+    });
     command.once('error', reject);
   });
 
