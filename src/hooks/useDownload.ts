@@ -61,11 +61,10 @@ export const useDownload = (props: UseDownloadProps) => {
 
       try {
         const args = [
+          '--progress',
           '--progress-template',
           'download:%(progress)j',
           '--newline',
-          '--progress-delta',
-          '1',
           '--concurrent-fragments',
           String(Math.max(threads, 1)),
           '--hls-use-mpegts',
@@ -82,6 +81,7 @@ export const useDownload = (props: UseDownloadProps) => {
         ctrl.current = new AbortController();
 
         const onProgress = (line: string) => {
+          console.log('[stdout/stderr]', JSON.stringify(line));
           try {
             const json = JSON.parse(line.trim()) as {
               fragment_index?: number;
@@ -91,23 +91,22 @@ export const useDownload = (props: UseDownloadProps) => {
               console.log('[progress]', json.fragment_index, '/', json.fragment_count);
               props.onDownload(json.fragment_index, json.fragment_count);
             }
-          } catch { }
+          } catch (e) {
+            console.log('[parse error]', e);
+          }
         };
 
-        ytdlp.stdout.on('data', onProgress);
+        ytdlp.stdout.on('data', (line) => { console.log('[stdout raw]', JSON.stringify(line)); onProgress(line); });
+        ytdlp.stderr.on('data', (line) => { console.log('[stderr raw]', JSON.stringify(line)); onProgress(line); });
 
         const waitForExit = waitForCommand(ytdlp);
         const child = await ytdlp.spawn();
 
-        const killTree = () => {
-          Command.create('taskkill', ['/F', '/T', '/PID', String(child.pid)]).spawn().catch(() => {});
-        };
-
         if (ctrl.current.signal.aborted) {
-          killTree();
+          child.kill();
         }
 
-        ctrl.current.signal.addEventListener('abort', killTree);
+        ctrl.current.signal.addEventListener('abort', () => child.kill());
 
         await waitForExit;
       } catch (e) {

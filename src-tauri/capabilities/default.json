@@ -18,10 +18,6 @@
           "sidecar": true,
           "name": "binaries/yt-dlp",
           "args": true
-        },
-        {
-          "name": "taskkill",
-          "args": true
         }
       ]
     }
