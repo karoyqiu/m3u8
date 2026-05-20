@@ -29,7 +29,7 @@ yt-dlp
 - `--hls-use-mpegts` — native HLS concatenation, no ffmpeg remux needed
 - `--no-part` — write output file directly, no `.part` intermediary
 
-Output extension: `.ts` (MPEG-TS). Hash-generated filenames use `.ts` instead of `.mp4`. User-specified filenames are passed as-is.
+Output extension: `.ts` (MPEG-TS). Hash-generated filenames use `.ts` instead of `.mp4`. User-specified filenames are passed as-is to `-o`; yt-dlp respects the given extension but the container will be MPEG-TS regardless of what extension is written.
 
 ---
 
