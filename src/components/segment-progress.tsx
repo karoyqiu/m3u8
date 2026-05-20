@@ -32,9 +32,8 @@ export default function SegmentProgress(props: SegmentProgressProps) {
   const { width, total, progress } = props;
   const ref = useRef<HTMLCanvasElement>(null);
 
-  // 3 秒一块
-  const segments = Math.round(total / 3);
-  const value = Math.round(progress / 3);
+  const segments = total;
+  const value = progress;
 
   // 一行最多的列数
   const cols = Math.max(Math.floor((width + gap) / fullBlockSize), 1);
