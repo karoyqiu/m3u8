@@ -5,15 +5,11 @@ import { useCallback, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { z } from 'zod/v4-mini';
 
-const OUT_TIME_US = 'out_time_us=';
-const DURATION = '  Duration: ';
+const PROGRESS_PREFIX = 'download:';
 
 export const downloadParamsSchema = z.object({
-  /// 要下载的 URL
   url: z.url(),
-  /// 要保存的文件名
   filename: z.optional(z.string()),
-  /// Referer 请求头
   referer: z.optional(z.string()),
 });
 export type DownloadParams = z.infer<typeof downloadParamsSchema>;
@@ -27,7 +23,7 @@ const hash = async (s: string) => {
 
 const generateFileName = async (s: string) => {
   const filename = await hash(s);
-  return `${filename}.mp4`;
+  return `${filename}.ts`;
 };
 
 const waitForCommand = (command: Command<string>) =>
@@ -35,20 +31,6 @@ const waitForCommand = (command: Command<string>) =>
     command.once('close', resolve);
     command.once('error', reject);
   });
-
-const parseDuration = (text: string) => {
-  const match = /(?<h>\d{2,}):(?<m>\d{2}):(?<s>\d{2}).(?<ms>\d{2})/.exec(text);
-
-  if (match?.groups) {
-    const h = parseInt(match.groups.h, 10);
-    const m = parseInt(match.groups.m, 10);
-    const s = parseInt(match.groups.s, 10);
-    const ms = parseInt(match.groups.ms, 10);
-    return h * 3600 + m * 60 + s + ms / 100;
-  }
-
-  return 0;
-};
 
 type UseDownloadProps = {
   onStart: () => void;
@@ -76,52 +58,40 @@ export const useDownload = (props: UseDownloadProps) => {
       const filename = params.filename || (await generateFileName(params.url));
 
       try {
-        let duration = 1;
-
         const args = [
-          '-y',
-          '-progress',
-          'pipe:1',
-          '-hide_banner',
-          '-allowed_extensions',
-          'ALL',
-          '-extension_picky',
-          'false',
-          '-reconnect',
-          '1',
-          '-reconnect_streamed',
-          '1',
-          '-http_multiple',
-          '1',
-          '-threads',
-          String(threads),
+          '--progress-template',
+          'download:%(progress)j',
+          '--newline',
+          '--concurrent-fragments',
+          String(Math.max(threads ?? 1, 1)),
+          '--hls-use-mpegts',
+          '--no-part',
         ];
 
         if (params.referer) {
-          args.push('-referer', params.referer);
+          args.push('--referer', params.referer);
         }
 
-        args.push('-i', params.url, '-c', 'copy', filename);
-        const ffmpeg = Command.sidecar('binaries/ffmpeg', args, { cwd: dir });
+        args.push('-o', filename, params.url);
+
+        const ytdlp = Command.sidecar('binaries/yt-dlp', args, { cwd: dir });
         ctrl.current = new AbortController();
 
-        ffmpeg.stdout.on('data', (line) => {
-          if (line.startsWith(OUT_TIME_US)) {
-            const value = line.substring(OUT_TIME_US.length);
-            const us = parseFloat(value);
-            props.onDownload(us / 1_000_000, duration);
-          }
-        });
-        ffmpeg.stderr.on('data', (line) => {
-          if (line.startsWith(DURATION)) {
-            const comma = line.indexOf(',');
-            const dur = line.substring(DURATION.length, comma);
-            duration = parseDuration(dur);
-          }
+        ytdlp.stderr.on('data', (line) => {
+          if (!line.startsWith(PROGRESS_PREFIX)) return;
+          try {
+            const json = JSON.parse(line.slice(PROGRESS_PREFIX.length)) as {
+              fragment_index?: number;
+              fragment_count?: number;
+            };
+            if (json.fragment_index != null && json.fragment_count != null) {
+              props.onDownload(json.fragment_index, json.fragment_count);
+            }
+          } catch {}
         });
 
-        const waitForExit = waitForCommand(ffmpeg);
-        const child = await ffmpeg.spawn();
+        const waitForExit = waitForCommand(ytdlp);
+        const child = await ytdlp.spawn();
 
         if (ctrl.current.signal.aborted) {
           child.kill();
