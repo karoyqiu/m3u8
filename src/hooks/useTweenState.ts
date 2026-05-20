@@ -128,7 +128,6 @@ export const easeInOutExpo = (t: number, b: number, _c: number, d: number) => {
   }
 
   return (c / 2) * (-(2 ** (-10 * --t)) + 2) + b;
-  0;
 };
 
 export const easeInCirc = (t: number, b: number, _c: number, d: number) => {

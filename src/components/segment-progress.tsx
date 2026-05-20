@@ -42,23 +42,19 @@ export default function SegmentProgress(props: SegmentProgressProps) {
   // 需要的高度，去掉多余的间隙
   const height = Math.max(rows * fullBlockSize - gap, 0);
 
-  // 计算块的左上角位置
-  const calcPos = (index: number) => {
-    const x = (index % cols) * fullBlockSize;
-    const y = Math.floor(index / cols) * fullBlockSize;
-    return { x, y };
-  };
+  useEffect(() => {
+    const calcPos = (index: number) => {
+      const x = (index % cols) * fullBlockSize;
+      const y = Math.floor(index / cols) * fullBlockSize;
+      return { x, y };
+    };
 
-  // 绘制
-  const draw = () => {
     const ctx = ref.current?.getContext('2d', { alpha: false });
 
     if (ctx) {
-      // 要绘制的路径
       const grays = new Path2D();
       const greens = new Path2D();
 
-      // 要使用的颜色
       const { gray, green } = getColors(ctx.canvas);
 
       for (let i = 0; i < segments; i++) {
@@ -82,10 +78,6 @@ export default function SegmentProgress(props: SegmentProgressProps) {
 
       ctx.restore();
     }
-  };
-
-  useEffect(() => {
-    draw();
   }, [segments, value, cols]);
 
   return (

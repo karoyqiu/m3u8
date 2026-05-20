@@ -5,7 +5,6 @@ import { useCallback, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { z } from 'zod/v4-mini';
 
-
 export const downloadParamsSchema = z.object({
   url: z.url(),
   filename: z.optional(z.string()),
@@ -40,7 +39,7 @@ type UseDownloadProps = {
   onEnd: () => void;
 };
 
-export const useDownload = (props: UseDownloadProps) => {
+export const useDownload = ({ onStart, onDownload, onEnd }: UseDownloadProps) => {
   const [downloading, setDownloading] = useState(false);
   const ctrl = useRef<AbortController>(null);
 
@@ -55,20 +54,23 @@ export const useDownload = (props: UseDownloadProps) => {
       }
 
       setDownloading(true);
-      props.onStart();
+      onStart();
 
       const filename = params.filename || (await generateFileName(params.url));
 
       try {
         const args = [
-          '--progress',
           '--progress-template',
           'download:%(progress)j',
+          '--progress-delta',
+          '0.25',
           '--newline',
           '--concurrent-fragments',
           String(Math.max(threads, 1)),
           '--hls-use-mpegts',
           '--no-part',
+          '--abort-on-unavailable-fragments',
+          '--no-continue',
         ];
 
         if (params.referer) {
@@ -81,32 +83,33 @@ export const useDownload = (props: UseDownloadProps) => {
         ctrl.current = new AbortController();
 
         const onProgress = (line: string) => {
-          console.log('[stdout/stderr]', JSON.stringify(line));
           try {
             const json = JSON.parse(line.trim()) as {
               fragment_index?: number;
               fragment_count?: number;
             };
             if (json.fragment_index != null && json.fragment_count != null) {
-              console.log('[progress]', json.fragment_index, '/', json.fragment_count);
-              props.onDownload(json.fragment_index, json.fragment_count);
+              onDownload(json.fragment_index, json.fragment_count);
             }
-          } catch (e) {
-            console.log('[parse error]', e);
-          }
+          } catch {}
         };
 
-        ytdlp.stdout.on('data', (line) => { console.log('[stdout raw]', JSON.stringify(line)); onProgress(line); });
-        ytdlp.stderr.on('data', (line) => { console.log('[stderr raw]', JSON.stringify(line)); onProgress(line); });
+        ytdlp.stdout.on('data', onProgress);
 
         const waitForExit = waitForCommand(ytdlp);
         const child = await ytdlp.spawn();
 
+        const killTree = () => {
+          Command.create('taskkill', ['/F', '/T', '/PID', String(child.pid)])
+            .spawn()
+            .catch(() => {});
+        };
+
         if (ctrl.current.signal.aborted) {
-          child.kill();
+          killTree();
         }
 
-        ctrl.current.signal.addEventListener('abort', () => child.kill());
+        ctrl.current.signal.addEventListener('abort', killTree);
 
         await waitForExit;
       } catch (e) {
@@ -114,10 +117,10 @@ export const useDownload = (props: UseDownloadProps) => {
         await remove(`${dir}/${filename}`).catch(() => {});
       } finally {
         setDownloading(false);
-        props.onEnd();
+        onEnd();
       }
     },
-    [props.onStart, props.onDownload, props.onEnd],
+    [onStart, onDownload, onEnd],
   );
 
   const abort = useCallback(() => {
