@@ -16,7 +16,7 @@
       "allow": [
         {
           "sidecar": true,
-          "name": "binaries/ffmpeg",
+          "name": "binaries/yt-dlp",
           "args": true
         }
       ]
