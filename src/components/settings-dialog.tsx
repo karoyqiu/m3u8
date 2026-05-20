@@ -115,7 +115,7 @@ export default function SettingsDialog(props: ButtonProps) {
               name="threads"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Threads</FormLabel>
+                  <FormLabel>Concurrent Fragments</FormLabel>
                   <FormControl>
                     <Input
                       type="number"
@@ -126,7 +126,7 @@ export default function SettingsDialog(props: ButtonProps) {
                     />
                   </FormControl>
                   <FormDescription>
-                    Number of FFmpeg threads. 0 = auto.
+                    Number of fragments to download in parallel. Default: 1.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
