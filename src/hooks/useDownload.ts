@@ -68,9 +68,9 @@ export const useDownload = ({ onStart, onDownload, onEnd }: UseDownloadProps) =>
           '--concurrent-fragments',
           String(Math.max(threads, 1)),
           '--hls-use-mpegts',
-          '--no-part',
+          //'--no-part',
           '--abort-on-unavailable-fragments',
-          '--no-continue',
+          //'--no-continue',
           '-t',
           'mp4',
         ];
@@ -85,6 +85,7 @@ export const useDownload = ({ onStart, onDownload, onEnd }: UseDownloadProps) =>
         ctrl.current = new AbortController();
 
         const onProgress = (line: string) => {
+          console.debug('yt-dlp:', line);
           try {
             const json = JSON.parse(line.trim()) as {
               fragment_index?: number;
@@ -97,6 +98,7 @@ export const useDownload = ({ onStart, onDownload, onEnd }: UseDownloadProps) =>
         };
 
         ytdlp.stdout.on('data', onProgress);
+        ytdlp.stderr.on('data', (line) => { console.error('yt-dlp error:', line); });
 
         const waitForExit = waitForCommand(ytdlp);
         const child = await ytdlp.spawn();
