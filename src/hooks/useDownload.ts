@@ -5,7 +5,6 @@ import { useCallback, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { z } from 'zod/v4-mini';
 
-const PROGRESS_PREFIX = 'download:';
 
 export const downloadParamsSchema = z.object({
   url: z.url(),
@@ -80,10 +79,9 @@ export const useDownload = (props: UseDownloadProps) => {
         const ytdlp = Command.sidecar('binaries/yt-dlp', args, { cwd: dir });
         ctrl.current = new AbortController();
 
-        ytdlp.stdout.on('data', (line) => {
-          if (!line.startsWith(PROGRESS_PREFIX)) return;
+        ytdlp.stderr.on('data', (line) => {
           try {
-            const json = JSON.parse(line.slice(PROGRESS_PREFIX.length)) as {
+            const json = JSON.parse(line) as {
               fragment_index?: number;
               fragment_count?: number;
             };
