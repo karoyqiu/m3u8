@@ -79,9 +79,9 @@ export const useDownload = (props: UseDownloadProps) => {
         const ytdlp = Command.sidecar('binaries/yt-dlp', args, { cwd: dir });
         ctrl.current = new AbortController();
 
-        ytdlp.stderr.on('data', (line) => {
+        const onProgress = (line: string) => {
           try {
-            const json = JSON.parse(line) as {
+            const json = JSON.parse(line.trim()) as {
               fragment_index?: number;
               fragment_count?: number;
             };
@@ -89,7 +89,10 @@ export const useDownload = (props: UseDownloadProps) => {
               props.onDownload(json.fragment_index, json.fragment_count);
             }
           } catch {}
-        });
+        };
+
+        ytdlp.stdout.on('data', onProgress);
+        ytdlp.stderr.on('data', onProgress);
 
         const waitForExit = waitForCommand(ytdlp);
         const child = await ytdlp.spawn();
