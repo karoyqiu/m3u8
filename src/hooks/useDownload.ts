@@ -63,7 +63,7 @@ export const useDownload = (props: UseDownloadProps) => {
           'download:%(progress)j',
           '--newline',
           '--concurrent-fragments',
-          String(Math.max(threads ?? 1, 1)),
+          String(Math.max(threads, 1)),
           '--hls-use-mpegts',
           '--no-part',
         ];
@@ -77,7 +77,7 @@ export const useDownload = (props: UseDownloadProps) => {
         const ytdlp = Command.sidecar('binaries/yt-dlp', args, { cwd: dir });
         ctrl.current = new AbortController();
 
-        ytdlp.stderr.on('data', (line) => {
+        ytdlp.stdout.on('data', (line) => {
           if (!line.startsWith(PROGRESS_PREFIX)) return;
           try {
             const json = JSON.parse(line.slice(PROGRESS_PREFIX.length)) as {
@@ -95,7 +95,6 @@ export const useDownload = (props: UseDownloadProps) => {
 
         if (ctrl.current.signal.aborted) {
           child.kill();
-          return;
         }
 
         ctrl.current.signal.addEventListener('abort', () => child.kill());
@@ -103,11 +102,11 @@ export const useDownload = (props: UseDownloadProps) => {
         await waitForExit;
       } catch (e) {
         toast.error(`${e}`);
-        await remove(filename);
+        await remove(`${dir}/${filename}`).catch(() => {});
+      } finally {
+        setDownloading(false);
+        props.onEnd();
       }
-
-      setDownloading(false);
-      props.onEnd();
     },
     [props.onStart, props.onDownload, props.onEnd],
   );
