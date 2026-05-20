@@ -61,6 +61,7 @@ export const useDownload = (props: UseDownloadProps) => {
 
       try {
         const args = [
+          '--progress',
           '--progress-template',
           'download:%(progress)j',
           '--newline',
