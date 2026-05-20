@@ -21,7 +21,6 @@
         },
         {
           "name": "taskkill",
-          "command": "taskkill",
           "args": true
         }
       ]
