@@ -63,6 +63,7 @@ export const useDownload = (props: UseDownloadProps) => {
   const download = useCallback(
     async (params: DownloadParams) => {
       const dir = readLocalStorageValue<string>({ key: 'dir' });
+      const threads = readLocalStorageValue<number>({ key: 'threads', defaultValue: 0 });
 
       if (!dir) {
         toast.error('The download directory is not set.');
@@ -90,6 +91,10 @@ export const useDownload = (props: UseDownloadProps) => {
           '1',
           '-reconnect_streamed',
           '1',
+          '-http_multiple',
+          '1',
+          '-threads',
+          String(threads),
         ];
 
         if (params.referer) {

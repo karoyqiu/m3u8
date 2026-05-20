@@ -29,20 +29,28 @@ import { Input } from '@/components/ui/input';
 
 const settingsSchema = z.object({
   dir: z.string(),
+  threads: z.number(),
 });
 type ValuesType = z.infer<typeof settingsSchema>;
 
 export default function SettingsDialog(props: ButtonProps) {
   const [dir, setDir] = useLocalStorage({ key: 'dir', getInitialValueInEffect: false });
+  const [threads, setThreads] = useLocalStorage<number>({
+    key: 'threads',
+    defaultValue: 0,
+    getInitialValueInEffect: false,
+  });
   const form = useForm<ValuesType>({
     resolver: standardSchemaResolver(settingsSchema),
     defaultValues: {
       dir,
+      threads: threads ?? 0,
     },
   });
 
   function onSubmit(values: ValuesType) {
     setDir(values.dir);
+    setThreads(values.threads);
   }
 
   return (
@@ -102,9 +110,31 @@ export default function SettingsDialog(props: ButtonProps) {
                 </FormItem>
               )}
             />
+            <FormField
+              control={form.control}
+              name="threads"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Threads</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={64}
+                      {...field}
+                      onChange={(e) => field.onChange(e.target.valueAsNumber)}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Number of FFmpeg threads. 0 = auto.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <DialogFooter>
               <DialogClose asChild>
-                <Button variant="ghost" onClick={() => form.reset({ dir })}>
+                <Button variant="ghost" onClick={() => form.reset({ dir, threads: threads ?? 0 })}>
                   Cancel
                 </Button>
               </DialogClose>
