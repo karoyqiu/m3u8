@@ -71,6 +71,8 @@ export const useDownload = ({ onStart, onDownload, onEnd }: UseDownloadProps) =>
           '--no-part',
           '--abort-on-unavailable-fragments',
           '--no-continue',
+          '-t',
+          'mp4',
         ];
 
         if (params.referer) {
