@@ -77,7 +77,7 @@ export const useDownload = (props: UseDownloadProps) => {
 
         args.push('-o', filename, params.url);
 
-        const ytdlp = Command.sidecar('binaries/yt-dlp', args, { cwd: dir });
+        const ytdlp = Command.sidecar('binaries/yt-dlp', args, { cwd: dir, env: { PYTHONUNBUFFERED: '1' } });
         ctrl.current = new AbortController();
 
         const onProgress = (line: string) => {
