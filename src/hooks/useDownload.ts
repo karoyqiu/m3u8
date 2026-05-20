@@ -77,23 +77,27 @@ export const useDownload = (props: UseDownloadProps) => {
 
         args.push('-o', filename, params.url);
 
-        const ytdlp = Command.sidecar('binaries/yt-dlp', args, { cwd: dir, env: { PYTHONUNBUFFERED: '1' } });
+        const ytdlp = Command.sidecar('binaries/yt-dlp', args, { cwd: dir });
         ctrl.current = new AbortController();
 
         const onProgress = (line: string) => {
+          console.log('[stdout/stderr]', JSON.stringify(line));
           try {
             const json = JSON.parse(line.trim()) as {
               fragment_index?: number;
               fragment_count?: number;
             };
             if (json.fragment_index != null && json.fragment_count != null) {
+              console.log('[progress]', json.fragment_index, '/', json.fragment_count);
               props.onDownload(json.fragment_index, json.fragment_count);
             }
-          } catch {}
+          } catch (e) {
+            console.log('[parse error]', e);
+          }
         };
 
-        ytdlp.stdout.on('data', onProgress);
-        ytdlp.stderr.on('data', onProgress);
+        ytdlp.stdout.on('data', (line) => { console.log('[stdout raw]', JSON.stringify(line)); onProgress(line); });
+        ytdlp.stderr.on('data', (line) => { console.log('[stderr raw]', JSON.stringify(line)); onProgress(line); });
 
         const waitForExit = waitForCommand(ytdlp);
         const child = await ytdlp.spawn();
