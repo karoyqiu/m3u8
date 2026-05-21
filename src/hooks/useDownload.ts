@@ -117,8 +117,13 @@ export const useDownload = ({ onStart, onDownload, onEnd }: UseDownloadProps) =>
 
         await waitForExit;
       } catch (e) {
-        toast.error(`${e}`);
-        await remove(`${dir}/${filename}`).catch(() => {});
+        if (ctrl.current?.signal?.aborted) {
+          toast.error(`${e}`);
+          await remove(`${dir}/${filename}`).catch(() => {});
+        } else {
+          toast.error(`${e}`, { duration: Infinity });
+          setTimeout(() => download(params), 100);
+        }
       } finally {
         setDownloading(false);
         onEnd();
