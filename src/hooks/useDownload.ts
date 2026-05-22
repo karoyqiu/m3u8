@@ -126,6 +126,7 @@ export const useDownload = ({ onStart, onDownload, onEnd }: UseDownloadProps) =>
         }
 
         ctrl.current.signal.addEventListener('abort', () => ffmpegChild.kill().catch(() => {}));
+        toast.promise(waitForFfmpeg, { loading: 'Normalizing audio volume...' });
 
         await waitForFfmpeg;
         await Promise.all([remove(`${dir}/${tsFilename}`), recordDownload(params.filename)]);
