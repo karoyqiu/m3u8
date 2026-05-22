@@ -1,6 +1,7 @@
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema';
 import { useLocalStorage } from '@mantine/hooks';
 import { useForm } from 'react-hook-form';
+import { toast } from 'sonner';
 
 import {
   Form,
@@ -13,6 +14,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { type DownloadParams, downloadParamsSchema, type useDownload } from '@/hooks/useDownload';
+import { checkDownloaded } from '@/lib/downloads-db';
 
 type DownloadFormProps = Pick<ReturnType<typeof useDownload>, 'downloading' | 'download'> & {
   id: string;
@@ -63,9 +65,20 @@ export default function DownloadForm(props: DownloadFormProps) {
             <FormItem>
               <FormLabel>Filename</FormLabel>
               <FormControl>
-                <Input {...field} placeholder="Optional" />
+                <Input
+                  {...field}
+                  required
+                  onBlur={async (e) => {
+                    field.onBlur();
+                    const basename = e.target.value.trim();
+                    if (basename) {
+                      const already = await checkDownloaded(basename);
+                      if (already) toast.warning(`"${basename}" has already been downloaded.`);
+                    }
+                  }}
+                />
               </FormControl>
-              <FormDescription>The optional filename of the downloaded file.</FormDescription>
+              <FormDescription>The output filename without extension. Saved as &lt;filename&gt;.mp4.</FormDescription>
               <FormMessage />
             </FormItem>
           )}

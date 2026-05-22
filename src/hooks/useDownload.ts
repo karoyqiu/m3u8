@@ -5,24 +5,14 @@ import { useCallback, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { z } from 'zod/v4-mini';
 
+import { recordDownload } from '@/lib/downloads-db';
+
 export const downloadParamsSchema = z.object({
   url: z.url(),
-  filename: z.optional(z.string()),
+  filename: z.string().check(z.minLength(1)),
   referer: z.optional(z.string()),
 });
 export type DownloadParams = z.infer<typeof downloadParamsSchema>;
-
-const hash = async (s: string) => {
-  const bytes = new TextEncoder().encode(s);
-  const buffer = await crypto.subtle.digest('SHA-256', bytes);
-  const array = Array.from(new Uint8Array(buffer));
-  return array.map((b) => b.toString(16).padStart(2, '0')).join('');
-};
-
-const generateFileName = async (s: string) => {
-  const filename = await hash(s);
-  return `${filename}.ts`;
-};
 
 const waitForCommand = (command: Command<string>) =>
   new Promise<void>((resolve, reject) => {
@@ -56,9 +46,12 @@ export const useDownload = ({ onStart, onDownload, onEnd }: UseDownloadProps) =>
       setDownloading(true);
       onStart();
 
-      const filename = params.filename || (await generateFileName(params.url));
+      const tsFilename = `${params.filename}.ts`;
+      const mp4Path = `${dir}\\${params.filename}.mp4`;
 
       try {
+        const execCmd = `ffmpeg -v quiet -y -i "%(filepath)s" -c:v copy -af dynaudnorm=f=150:g=13 "${mp4Path}"`;
+
         const args = [
           '--progress-template',
           'download:%(progress)j',
@@ -68,18 +61,16 @@ export const useDownload = ({ onStart, onDownload, onEnd }: UseDownloadProps) =>
           '--concurrent-fragments',
           String(Math.max(threads, 1)),
           '--hls-use-mpegts',
-          //'--no-part',
           '--abort-on-unavailable-fragments',
-          //'--no-continue',
-          '-t',
-          'mp4',
+          '--exec',
+          execCmd,
         ];
 
         if (params.referer) {
           args.push('--referer', params.referer);
         }
 
-        args.push('-o', filename, params.url);
+        args.push('-o', tsFilename, params.url);
 
         const ytdlp = Command.sidecar('binaries/yt-dlp', args, { cwd: dir });
         ctrl.current = new AbortController();
@@ -90,8 +81,11 @@ export const useDownload = ({ onStart, onDownload, onEnd }: UseDownloadProps) =>
             const json = JSON.parse(line.trim()) as {
               fragment_index?: number;
               fragment_count?: number;
+              status?: string;
             };
-            if (json.fragment_index != null && json.fragment_count != null) {
+            if (json.status === 'finished' && json.fragment_count != null) {
+              onDownload(json.fragment_count, json.fragment_count);
+            } else if (json.fragment_index != null && json.fragment_count != null) {
               onDownload(json.fragment_index, json.fragment_count);
             }
           } catch {}
@@ -116,12 +110,13 @@ export const useDownload = ({ onStart, onDownload, onEnd }: UseDownloadProps) =>
         ctrl.current.signal.addEventListener('abort', killTree);
 
         await waitForExit;
+        await remove(`${dir}/${tsFilename}`);
+        await recordDownload(params.filename);
       } catch (e) {
         if (ctrl.current?.signal?.aborted) {
           toast.error(`${e}`);
-          await remove(`${dir}/${filename}`).catch(() => {});
         } else {
-          toast.error(`${e}`, { duration: Infinity });
+          toast.error(`${e}`, { duration: Infinity, closeButton: true });
           setTimeout(() => download(params), 100);
         }
       } finally {
