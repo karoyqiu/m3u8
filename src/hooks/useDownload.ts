@@ -92,7 +92,10 @@ export const useDownload = ({ onStart, onDownload, onEnd }: UseDownloadProps) =>
         };
 
         ytdlp.stdout.on('data', onProgress);
-        ytdlp.stderr.on('data', (line) => { console.error('yt-dlp error:', line); });
+        ytdlp.stderr.on('data', (line) => {
+          console.error('yt-dlp error:', line);
+          toast.error(line);
+        });
 
         const waitForExit = waitForCommand(ytdlp);
         const child = await ytdlp.spawn();
@@ -113,6 +116,8 @@ export const useDownload = ({ onStart, onDownload, onEnd }: UseDownloadProps) =>
         await remove(`${dir}/${tsFilename}`);
         await recordDownload(params.filename);
       } catch (e) {
+        console.error(e);
+
         if (ctrl.current?.signal?.aborted) {
           toast.error(`${e}`);
         } else {
