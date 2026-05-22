@@ -14,10 +14,10 @@ export const downloadParamsSchema = z.object({
 });
 export type DownloadParams = z.infer<typeof downloadParamsSchema>;
 
-const waitForCommand = (command: Command<string>) =>
+const waitForCommand = (name: string, command: Command<string>) =>
   new Promise<void>((resolve, reject) => {
     command.once('close', (data) => {
-      if (data.code !== 0) reject(new Error(`yt-dlp exited with code ${data.code}`));
+      if (data.code !== 0) reject(new Error(`${name} exited with code ${data.code}`));
       else resolve();
     });
     command.once('error', reject);
@@ -93,7 +93,7 @@ export const useDownload = ({ onStart, onDownload, onEnd }: UseDownloadProps) =>
           toast.error(line);
         });
 
-        const waitForExit = waitForCommand(ytdlp);
+        const waitForExit = waitForCommand('yt-dlp', ytdlp);
         const child = await ytdlp.spawn();
 
         const killTree = () => {
@@ -107,8 +107,8 @@ export const useDownload = ({ onStart, onDownload, onEnd }: UseDownloadProps) =>
         }
 
         ctrl.current.signal.addEventListener('abort', killTree);
-
         await waitForExit;
+        ctrl.current.signal.removeEventListener('abort', killTree);
 
         const ffmpeg = Command.sidecar('binaries/ffmpeg', [
           '-v', 'quiet',
@@ -118,12 +118,17 @@ export const useDownload = ({ onStart, onDownload, onEnd }: UseDownloadProps) =>
           '-af', 'dynaudnorm=f=150:g=13',
           mp4Path,
         ]);
-        const waitForFfmpeg = waitForCommand(ffmpeg);
-        await ffmpeg.spawn();
-        await waitForFfmpeg;
+        const waitForFfmpeg = waitForCommand('ffmpeg', ffmpeg);
+        const ffmpegChild = await ffmpeg.spawn();
 
-        await remove(`${dir}/${tsFilename}`);
-        await recordDownload(params.filename);
+        if (ctrl.current.signal.aborted) {
+          ffmpegChild.kill().catch(() => {});
+        }
+
+        ctrl.current.signal.addEventListener('abort', () => ffmpegChild.kill().catch(() => {}));
+
+        await waitForFfmpeg;
+        await Promise.all([remove(`${dir}/${tsFilename}`), recordDownload(params.filename)]);
       } catch (e) {
         console.error(e);
 
