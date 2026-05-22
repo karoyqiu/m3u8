@@ -20,6 +20,11 @@
           "args": true
         },
         {
+          "sidecar": true,
+          "name": "binaries/ffmpeg",
+          "args": true
+        },
+        {
           "name": "taskkill",
           "cmd": "taskkill",
           "args": true

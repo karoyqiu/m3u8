@@ -50,8 +50,6 @@ export const useDownload = ({ onStart, onDownload, onEnd }: UseDownloadProps) =>
       const mp4Path = `${dir}\\${params.filename}.mp4`;
 
       try {
-        const execCmd = `ffmpeg -v quiet -y -i "%(filepath)s" -c:v copy -af dynaudnorm=f=150:g=13 "${mp4Path}"`;
-
         const args = [
           '--progress-template',
           'download:%(progress)j',
@@ -62,8 +60,6 @@ export const useDownload = ({ onStart, onDownload, onEnd }: UseDownloadProps) =>
           String(Math.max(threads, 1)),
           '--hls-use-mpegts',
           '--abort-on-unavailable-fragments',
-          '--exec',
-          execCmd,
         ];
 
         if (params.referer) {
@@ -113,6 +109,19 @@ export const useDownload = ({ onStart, onDownload, onEnd }: UseDownloadProps) =>
         ctrl.current.signal.addEventListener('abort', killTree);
 
         await waitForExit;
+
+        const ffmpeg = Command.sidecar('binaries/ffmpeg', [
+          '-v', 'quiet',
+          '-y',
+          '-i', `${dir}\\${tsFilename}`,
+          '-c:v', 'copy',
+          '-af', 'dynaudnorm=f=150:g=13',
+          mp4Path,
+        ]);
+        const waitForFfmpeg = waitForCommand(ffmpeg);
+        await ffmpeg.spawn();
+        await waitForFfmpeg;
+
         await remove(`${dir}/${tsFilename}`);
         await recordDownload(params.filename);
       } catch (e) {
