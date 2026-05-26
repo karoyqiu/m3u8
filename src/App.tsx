@@ -1,7 +1,8 @@
 import { useElementSize } from '@mantine/hooks';
 import { ProgressBarStatus, getCurrentWindow } from '@tauri-apps/api/window';
+import { open } from '@tauri-apps/plugin-dialog';
 import { relaunch } from '@tauri-apps/plugin-process';
-import { DownloadIcon, RotateCcwIcon, SquareIcon } from 'lucide-react';
+import { DownloadIcon, FolderSyncIcon, RotateCcwIcon, SquareIcon } from 'lucide-react';
 import { useCallback, useEffect, useId, useState } from 'react';
 
 import '@/App.css';
@@ -12,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Toaster } from '@/components/ui/sonner';
 import { useDownload } from '@/hooks/useDownload';
+import { useNormalize } from '@/hooks/useNormalize';
 
 const appWindow = getCurrentWindow();
 
@@ -49,12 +51,21 @@ function App() {
     onEnd,
   });
 
+  const { normalizing, normalize, abortNormalize } = useNormalize();
+
+  const handleNormalize = useCallback(async () => {
+    const dir = await open({ directory: true, recursive: true });
+    if (dir) normalize(dir);
+  }, [normalize]);
+
   const dfId = useId();
   const { ref, width } = useElementSize();
 
   useEffect(() => {
     appWindow.show();
   }, []);
+
+  const busy = downloading || normalizing;
 
   return (
     <>
@@ -67,9 +78,20 @@ function App() {
               Abort
             </Button>
           ) : (
-            <Button key={`${dfId}submit`} form={dfId} type="submit">
+            <Button key={`${dfId}submit`} form={dfId} type="submit" disabled={busy}>
               <DownloadIcon />
               Download
+            </Button>
+          )}
+          {normalizing ? (
+            <Button variant="destructive" type="button" onClick={abortNormalize}>
+              <SquareIcon fill="white" />
+              Abort Normalize
+            </Button>
+          ) : (
+            <Button variant="secondary" type="button" onClick={handleNormalize} disabled={busy}>
+              <FolderSyncIcon />
+              Normalize
             </Button>
           )}
           <SettingsDialog className="ms-auto" />
