@@ -1,3 +1,4 @@
+import { join } from '@tauri-apps/api/path';
 import { readDir, remove, rename } from '@tauri-apps/plugin-fs';
 import { Command } from '@tauri-apps/plugin-shell';
 import { useCallback, useRef, useState } from 'react';
@@ -8,6 +9,7 @@ const AUDIO_VIDEO_EXTENSIONS = new Set([
   'mp3', 'wav', 'aac', 'flac', 'm4a', 'ogg', 'opus', 'wma',
 ]);
 
+// Video streams are copied as-is; audio-only files omit -c:v copy
 const VIDEO_EXTENSIONS = new Set(['mp4', 'mkv', 'avi', 'mov', 'webm', 'flv', 'wmv', 'm4v']);
 
 const waitForCommand = (name: string, command: Command<string>) =>
@@ -21,36 +23,36 @@ const waitForCommand = (name: string, command: Command<string>) =>
 
 export const useNormalize = () => {
   const [normalizing, setNormalizing] = useState(false);
-  const ctrl = useRef<AbortController>(null);
+  const ctrl = useRef<AbortController | null>(null);
 
   const normalize = useCallback(async (dir: string) => {
+    const entries = await readDir(dir);
+    const files = entries.filter((e) => {
+      if (!e.isFile || !e.name) return false;
+      const ext = e.name.split('.').pop()?.toLowerCase();
+      return ext != null && AUDIO_VIDEO_EXTENSIONS.has(ext) && !e.name.includes('.normalizing.');
+    });
+
+    if (files.length === 0) {
+      toast.warning('No audio/video files found in the selected directory.');
+      return;
+    }
+
     setNormalizing(true);
     ctrl.current = new AbortController();
 
+    let done = 0;
+    const toastId = toast.loading(`Normalizing 0 / ${files.length} files...`);
+
     try {
-      const entries = await readDir(dir);
-      const files = entries.filter((e) => {
-        if (!e.isFile || !e.name) return false;
-        const ext = e.name.split('.').pop()?.toLowerCase();
-        return ext != null && AUDIO_VIDEO_EXTENSIONS.has(ext) && !e.name.includes('.normalizing.');
-      });
-
-      if (files.length === 0) {
-        toast.warning('No audio/video files found in the selected directory.');
-        return;
-      }
-
-      let done = 0;
-      const toastId = toast.loading(`Normalizing 0 / ${files.length} files...`);
-
       for (const entry of files) {
         if (ctrl.current.signal.aborted) break;
 
         const name = entry.name!;
         const ext = name.split('.').pop()!.toLowerCase();
         const nameNoExt = name.slice(0, -(ext.length + 1));
-        const inputPath = `${dir}\\${name}`;
-        const tempPath = `${dir}\\${nameNoExt}.normalizing.${ext}`;
+        const inputPath = await join(dir, name);
+        const tempPath = await join(dir, `${nameNoExt}.normalizing.${ext}`);
 
         const isVideo = VIDEO_EXTENSIONS.has(ext);
         const args = isVideo
@@ -60,6 +62,10 @@ export const useNormalize = () => {
         const ffmpeg = Command.sidecar('binaries/ffmpeg', args);
         const waitForFfmpeg = waitForCommand('ffmpeg', ffmpeg);
         const ffmpegChild = await ffmpeg.spawn();
+
+        if (ctrl.current.signal.aborted) {
+          ffmpegChild.kill().catch(() => {});
+        }
 
         const killFfmpeg = () => ffmpegChild.kill().catch(() => {});
         ctrl.current.signal.addEventListener('abort', killFfmpeg);
@@ -85,7 +91,12 @@ export const useNormalize = () => {
       }
     } catch (e) {
       console.error(e);
-      toast.error(`${e}`, { duration: Infinity, closeButton: true });
+      const msg = e instanceof Error ? e.message : String(e);
+      if (ctrl.current?.signal.aborted) {
+        toast.warning('Normalization aborted.', { id: toastId });
+      } else {
+        toast.error(msg, { id: toastId, duration: Infinity, closeButton: true });
+      }
     } finally {
       setNormalizing(false);
     }
