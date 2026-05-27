@@ -4,6 +4,7 @@ import { open } from '@tauri-apps/plugin-dialog';
 import { relaunch } from '@tauri-apps/plugin-process';
 import { DownloadIcon, FolderSyncIcon, RotateCcwIcon, SquareIcon } from 'lucide-react';
 import { useCallback, useEffect, useId, useState } from 'react';
+import { toast } from 'sonner';
 
 import '@/App.css';
 import DownloadForm from '@/components/download-form';
@@ -55,7 +56,12 @@ function App() {
 
   const handleNormalize = useCallback(async () => {
     const dir = await open({ directory: true, recursive: true });
-    if (dir) normalize(dir);
+    if (!dir) return;
+    toast.promise(normalize(dir), {
+      loading: 'Normalizing audio volume...',
+      success: (msg) => msg,
+      error: (e) => (e instanceof Error ? e.message : String(e)),
+    });
   }, [normalize]);
 
   const dfId = useId();
