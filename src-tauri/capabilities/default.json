@@ -8,7 +8,9 @@
     "core:window:allow-set-progress-bar",
     "core:window:allow-show",
     "dialog:allow-open",
+    "fs:allow-read-dir",
     "fs:allow-remove",
+    "fs:allow-rename",
     "process:allow-restart",
     "shell:allow-kill",
     {
