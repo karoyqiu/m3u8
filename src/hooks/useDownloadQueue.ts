@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { toast } from 'sonner';
 
 import { type DownloadParams, useDownload } from '@/hooks/useDownload';
 
@@ -54,6 +55,7 @@ export const useDownloadQueue = (opts: {
   }, []);
 
   const onError = useCallback((error: string) => {
+    toast.error(error, { closeButton: true });
     setQueue((prev) => {
       const next = prev.map((item) =>
         item.status === 'downloading' ? { ...item, status: 'failed' as const, error } : item,

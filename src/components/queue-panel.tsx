@@ -1,4 +1,4 @@
-import { CircleSlashIcon, LoaderIcon, XIcon } from 'lucide-react';
+import { CircleSlashIcon, LoaderIcon, RotateCcwIcon, XIcon } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -89,7 +89,7 @@ function QueueRow({
           onClick={() => onRetry(item.id)}
           title="Retry"
         >
-          <LoaderIcon className="size-3" />
+          <RotateCcwIcon className="size-3" />
         </Button>
       )}
     </div>
