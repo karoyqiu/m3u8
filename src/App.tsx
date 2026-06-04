@@ -6,12 +6,13 @@ import { useCallback, useEffect, useId, useState } from 'react';
 
 import '@/App.css';
 import DownloadForm from '@/components/download-form';
+import QueuePanel from '@/components/queue-panel';
 import SegmentProgress from '@/components/segment-progress';
 import SettingsDialog from '@/components/settings-dialog';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Toaster } from '@/components/ui/sonner';
-import { useDownload } from '@/hooks/useDownload';
+import { useDownloadQueue } from '@/hooks/useDownloadQueue';
 
 const appWindow = getCurrentWindow();
 
@@ -26,28 +27,31 @@ function App() {
   const [total, setTotal] = useState(0);
   const [progress, setProgress] = useState(0);
 
-  const onStart = useCallback(() => {
-    setProgress(0);
-    setTotal(0);
-    updateProgress(-1);
-  }, []);
-
-  const onDownload = useCallback((value: number, t: number) => {
+  const onProgress = useCallback((value: number, t: number) => {
     setProgress(value);
     setTotal(t);
     updateProgress(Math.round((value * 100) / t));
   }, []);
 
-  const onEnd = useCallback(() => {
-    window.localStorage.removeItem('url');
-    appWindow.setProgressBar({ status: ProgressBarStatus.None });
-  }, []);
+  const { queue, activeItem, pendingCount, enqueue, cancel, abort, retry, downloading } =
+    useDownloadQueue({ onProgress });
 
-  const { downloading, download, abort } = useDownload({
-    onStart,
-    onDownload,
-    onEnd,
-  });
+  // Sync taskbar progress with download state
+  useEffect(() => {
+    if (downloading) {
+      updateProgress(-1); // indeterminate until first progress event
+    } else {
+      appWindow.setProgressBar({ status: ProgressBarStatus.None });
+    }
+  }, [downloading]);
+
+  // Reset progress when active item changes
+  useEffect(() => {
+    if (activeItem) {
+      setProgress(0);
+      setTotal(0);
+    }
+  }, [activeItem?.id]);
 
   const dfId = useId();
   const { ref, width } = useElementSize();
@@ -58,29 +62,33 @@ function App() {
 
   return (
     <>
-      <main className="flex h-screen w-screen flex-col gap-4 p-4">
-        <DownloadForm {...{ downloading, download, id: dfId }} />
-        <div className="flex gap-2">
-          {downloading ? (
-            <Button key={`${dfId}abort`} variant="destructive" type="button" onClick={abort}>
-              <SquareIcon fill="white" />
-              Abort
-            </Button>
-          ) : (
-            <Button key={`${dfId}submit`} form={dfId} type="submit">
+      <main className="flex h-screen w-screen gap-4 p-4">
+        <div className={`flex flex-1 flex-col gap-4 ${queue.length > 0 ? 'max-w-[calc(100%-260px)]' : ''}`}>
+          <DownloadForm id={dfId} enqueue={enqueue} />
+          <div className="flex gap-2">
+            <Button form={dfId} type="submit">
               <DownloadIcon />
-              Download
+              {downloading ? 'Add to Queue' : 'Download'}
             </Button>
-          )}
-          <SettingsDialog className="ms-auto" />
-          <Button variant="secondary" onClick={relaunch}>
-            <RotateCcwIcon />
-            Restart
-          </Button>
+            {downloading && (
+              <Button variant="destructive" type="button" onClick={abort}>
+                <SquareIcon fill="white" />
+                Abort
+              </Button>
+            )}
+            <SettingsDialog className="ms-auto" />
+            <Button variant="secondary" onClick={relaunch}>
+              <RotateCcwIcon />
+              Restart
+            </Button>
+          </div>
+          <ScrollArea className="min-h-0" ref={ref} nonce="huahC9gksP5zq3dBQmX97mb9m5FEyGCt">
+            <SegmentProgress {...{ width, total, progress }} />
+          </ScrollArea>
         </div>
-        <ScrollArea className="min-h-0" ref={ref} nonce="huahC9gksP5zq3dBQmX97mb9m5FEyGCt">
-          <SegmentProgress {...{ width, total, progress }} />
-        </ScrollArea>
+        {queue.length > 0 && (
+          <QueuePanel queue={queue} pendingCount={pendingCount} onCancel={cancel} onAbort={abort} onRetry={retry} />
+        )}
       </main>
       <Toaster richColors />
     </>
