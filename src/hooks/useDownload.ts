@@ -25,11 +25,12 @@ const waitForCommand = (name: string, command: Command<string>) =>
 
 type UseDownloadProps = {
   onStart: () => void;
-  onDownload: (progress: number, total: number) => void;
-  onEnd: () => void;
+  onProgress: (progress: number, total: number) => void;
+  onSuccess: () => void;
+  onError: (error: string) => void;
 };
 
-export const useDownload = ({ onStart, onDownload, onEnd }: UseDownloadProps) => {
+export const useDownload = ({ onStart, onProgress, onSuccess, onError }: UseDownloadProps) => {
   const [downloading, setDownloading] = useState(false);
   const ctrl = useRef<AbortController>(null);
 
@@ -71,7 +72,7 @@ export const useDownload = ({ onStart, onDownload, onEnd }: UseDownloadProps) =>
         const ytdlp = Command.sidecar('binaries/yt-dlp', args, { cwd: dir });
         ctrl.current = new AbortController();
 
-        const onProgress = (line: string) => {
+        const handleProgress = (line: string) => {
           console.debug('yt-dlp:', line);
           try {
             const json = JSON.parse(line.trim()) as {
@@ -80,14 +81,14 @@ export const useDownload = ({ onStart, onDownload, onEnd }: UseDownloadProps) =>
               status?: string;
             };
             if (json.status === 'finished' && json.fragment_count != null) {
-              onDownload(json.fragment_count, json.fragment_count);
+              onProgress(json.fragment_count, json.fragment_count);
             } else if (json.fragment_index != null && json.fragment_count != null) {
-              onDownload(json.fragment_index, json.fragment_count);
+              onProgress(json.fragment_index, json.fragment_count);
             }
           } catch {}
         };
 
-        ytdlp.stdout.on('data', onProgress);
+        ytdlp.stdout.on('data', handleProgress);
         ytdlp.stderr.on('data', (line) => {
           console.error('yt-dlp error:', line);
           toast.error(line);
@@ -130,21 +131,20 @@ export const useDownload = ({ onStart, onDownload, onEnd }: UseDownloadProps) =>
 
         await waitForFfmpeg;
         await Promise.all([remove(`${dir}/${tsFilename}`), recordDownload(params.filename)]);
+        onSuccess();
       } catch (e) {
         console.error(e);
 
         if (ctrl.current?.signal?.aborted) {
-          toast.error(`${e}`);
+          // Aborted — no callback
         } else {
-          toast.error(`${e}`, { duration: Infinity, closeButton: true });
-          setTimeout(() => download(params), 100);
+          onError(`${e}`);
         }
       } finally {
         setDownloading(false);
-        onEnd();
       }
     },
-    [onStart, onDownload, onEnd],
+    [onStart, onProgress, onSuccess, onError],
   );
 
   const abort = useCallback(() => {
