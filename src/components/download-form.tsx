@@ -1,5 +1,4 @@
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema';
-import { useLocalStorage } from '@mantine/hooks';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 
@@ -13,22 +12,19 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { type DownloadParams, downloadParamsSchema, type useDownload } from '@/hooks/useDownload';
+import { type DownloadParams, downloadParamsSchema } from '@/hooks/useDownload';
 import { checkDownloaded } from '@/lib/downloads-db';
 
-type DownloadFormProps = Pick<ReturnType<typeof useDownload>, 'downloading' | 'download'> & {
+type DownloadFormProps = {
   id: string;
+  enqueue: (params: { url: string; filename: string; referer?: string }) => void;
 };
 
 export default function DownloadForm(props: DownloadFormProps) {
-  const [values, setValues] = useLocalStorage<DownloadParams>({
-    key: 'url',
-    getInitialValueInEffect: false,
-  });
-  const { id, downloading, download } = props;
+  const { id, enqueue } = props;
   const form = useForm<DownloadParams>({
     resolver: standardSchemaResolver(downloadParamsSchema),
-    defaultValues: values,
+    defaultValues: { url: '', filename: '', referer: '' },
   });
 
   return (
@@ -37,15 +33,14 @@ export default function DownloadForm(props: DownloadFormProps) {
         id={id}
         className="flex flex-col gap-6"
         autoComplete="off"
-        onSubmit={form.handleSubmit(async (values) => {
-          setValues(values);
-          await download(values);
+        onSubmit={form.handleSubmit((values) => {
+          enqueue(values);
+          form.reset({ url: '', filename: '', referer: '' });
         })}
       >
         <FormField
           control={form.control}
           name="url"
-          disabled={downloading}
           render={({ field }) => (
             <FormItem>
               <FormLabel>URL</FormLabel>
@@ -60,7 +55,6 @@ export default function DownloadForm(props: DownloadFormProps) {
         <FormField
           control={form.control}
           name="filename"
-          disabled={downloading}
           render={({ field }) => (
             <FormItem>
               <FormLabel>Filename</FormLabel>
@@ -86,7 +80,6 @@ export default function DownloadForm(props: DownloadFormProps) {
         <FormField
           control={form.control}
           name="referer"
-          disabled={downloading}
           render={({ field }) => (
             <FormItem>
               <FormLabel>Referer</FormLabel>
