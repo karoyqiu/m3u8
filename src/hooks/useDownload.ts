@@ -24,13 +24,12 @@ const waitForCommand = (name: string, command: Command<string>) =>
   });
 
 type UseDownloadProps = {
-  onStart: () => void;
   onProgress: (progress: number, total: number) => void;
   onSuccess: () => void;
   onError: (error: string) => void;
 };
 
-export const useDownload = ({ onStart, onProgress, onSuccess, onError }: UseDownloadProps) => {
+export const useDownload = ({ onProgress, onSuccess, onError }: UseDownloadProps) => {
   const [downloading, setDownloading] = useState(false);
   const ctrl = useRef<AbortController>(null);
 
@@ -45,7 +44,6 @@ export const useDownload = ({ onStart, onProgress, onSuccess, onError }: UseDown
       }
 
       setDownloading(true);
-      onStart();
 
       const tsFilename = `${params.filename}.ts`;
       const mp4Path = `${dir}\\${params.filename}.mp4`;
@@ -144,7 +142,7 @@ export const useDownload = ({ onStart, onProgress, onSuccess, onError }: UseDown
         setDownloading(false);
       }
     },
-    [onStart, onProgress, onSuccess, onError],
+    [onProgress, onSuccess, onError],
   );
 
   const abort = useCallback(() => {

@@ -6,13 +6,13 @@ import { type QueueItem } from '@/hooks/useDownloadQueue';
 
 type QueuePanelProps = {
   queue: QueueItem[];
-  pendingCount: number;
   onCancel: (id: string) => void;
   onAbort: () => void;
   onRetry: (id: string) => void;
 };
 
-export default function QueuePanel({ queue, pendingCount, onCancel, onAbort, onRetry }: QueuePanelProps) {
+export default function QueuePanel({ queue, onCancel, onAbort, onRetry }: QueuePanelProps) {
+  const pendingCount = queue.filter((item) => item.status === 'pending').length;
   return (
     <div className="flex w-[240px] shrink-0 flex-col border-l">
       <div className="flex items-center justify-between px-3 py-2">

@@ -3,6 +3,8 @@ import { toast } from 'sonner';
 
 import { type DownloadParams, useDownload } from '@/hooks/useDownload';
 
+export type { DownloadParams } from '@/hooks/useDownload';
+
 export type QueueItem = {
   id: string;
   url: string;
@@ -11,12 +13,6 @@ export type QueueItem = {
   status: 'pending' | 'downloading' | 'failed';
   error?: string;
   addedAt: number;
-};
-
-type EnqueueParams = {
-  url: string;
-  filename: string;
-  referer?: string;
 };
 
 const STORAGE_KEY = 'download-queue';
@@ -41,10 +37,6 @@ export const useDownloadQueue = (opts: {
   const processingRef = useRef(false);
   const isFirstRender = useRef(true);
 
-  const onStart = useCallback(() => {
-    // no-op — queue hook manages state externally
-  }, []);
-
   const onSuccess = useCallback(() => {
     setQueue((prev) => {
       const next = prev.filter((item) => item.status !== 'downloading');
@@ -67,7 +59,6 @@ export const useDownloadQueue = (opts: {
   }, []);
 
   const { downloading, download, abort: abortDownload } = useDownload({
-    onStart,
     onProgress: opts.onProgress,
     onSuccess,
     onError,
@@ -130,7 +121,7 @@ export const useDownloadQueue = (opts: {
   }, [downloading, queue, processNext]);
 
   const enqueue = useCallback(
-    (params: EnqueueParams) => {
+    (params: DownloadParams) => {
       const item: QueueItem = {
         id: crypto.randomUUID(),
         url: params.url,
@@ -182,7 +173,6 @@ export const useDownloadQueue = (opts: {
   );
 
   const activeItem = queue.find((item) => item.status === 'downloading') ?? null;
-  const pendingCount = queue.filter((item) => item.status === 'pending').length;
 
-  return { queue, activeItem, pendingCount, enqueue, cancel, abort, retry, downloading };
+  return { queue, activeItem, enqueue, cancel, abort, retry, downloading };
 };

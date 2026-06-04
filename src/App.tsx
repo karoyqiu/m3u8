@@ -33,7 +33,7 @@ function App() {
     updateProgress(Math.round((value * 100) / t));
   }, []);
 
-  const { queue, activeItem, pendingCount, enqueue, cancel, abort, retry, downloading } =
+  const { queue, activeItem, enqueue, cancel, abort, retry, downloading } =
     useDownloadQueue({ onProgress });
 
   // Sync taskbar progress with download state
@@ -63,7 +63,7 @@ function App() {
   return (
     <>
       <main className="flex h-screen w-screen gap-4 p-4">
-        <div className={`flex flex-1 flex-col gap-4 ${queue.length > 0 ? 'max-w-[calc(100%-260px)]' : ''}`}>
+        <div className="flex flex-1 flex-col gap-4">
           <DownloadForm id={dfId} enqueue={enqueue} />
           <div className="flex gap-2">
             <Button form={dfId} type="submit">
@@ -87,7 +87,7 @@ function App() {
           </ScrollArea>
         </div>
         {queue.length > 0 && (
-          <QueuePanel queue={queue} pendingCount={pendingCount} onCancel={cancel} onAbort={abort} onRetry={retry} />
+          <QueuePanel queue={queue} onCancel={cancel} onAbort={abort} onRetry={retry} />
         )}
       </main>
       <Toaster richColors />
