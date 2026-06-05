@@ -83,7 +83,7 @@ function App() {
         <div className="flex min-w-0 flex-1 flex-col gap-4">
           <DownloadForm id={dfId} enqueue={enqueue} />
           <div className="flex gap-2">
-            <Button form={dfId} type="submit" disabled={busy}>
+            <Button form={dfId} type="submit">
               <DownloadIcon />
               {downloading ? 'Add to Queue' : 'Download'}
             </Button>
