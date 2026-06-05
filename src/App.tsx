@@ -63,7 +63,7 @@ function App() {
   return (
     <>
       <main className="flex h-screen w-screen gap-4 p-4">
-        <div className="flex flex-1 flex-col gap-4">
+        <div className="flex min-w-0 flex-1 flex-col gap-4">
           <DownloadForm id={dfId} enqueue={enqueue} />
           <div className="flex gap-2">
             <Button form={dfId} type="submit">
