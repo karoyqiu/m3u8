@@ -1,8 +1,10 @@
 import { useElementSize } from '@mantine/hooks';
 import { ProgressBarStatus, getCurrentWindow } from '@tauri-apps/api/window';
+import { open } from '@tauri-apps/plugin-dialog';
 import { relaunch } from '@tauri-apps/plugin-process';
-import { DownloadIcon, RotateCcwIcon, SquareIcon } from 'lucide-react';
+import { DownloadIcon, FolderSyncIcon, RotateCcwIcon, SquareIcon } from 'lucide-react';
 import { useCallback, useEffect, useId, useState } from 'react';
+import { toast } from 'sonner';
 
 import '@/App.css';
 import DownloadForm from '@/components/download-form';
@@ -13,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Toaster } from '@/components/ui/sonner';
 import { useDownloadQueue } from '@/hooks/useDownloadQueue';
+import { useNormalize } from '@/hooks/useNormalize';
 
 const appWindow = getCurrentWindow();
 
@@ -53,6 +56,18 @@ function App() {
     }
   }, [activeItem?.id]);
 
+  const { normalizing, normalize, abortNormalize } = useNormalize();
+
+  const handleNormalize = useCallback(async () => {
+    const dir = await open({ directory: true, recursive: true });
+    if (!dir) return;
+    toast.promise(normalize(dir), {
+      loading: 'Normalizing audio volume...',
+      success: (msg) => msg,
+      error: (e) => (e instanceof Error ? e.message : String(e)),
+    });
+  }, [normalize]);
+
   const dfId = useId();
   const { ref, width } = useElementSize();
 
@@ -60,13 +75,15 @@ function App() {
     appWindow.show();
   }, []);
 
+  const busy = downloading || normalizing;
+
   return (
     <>
       <main className="flex h-screen w-screen gap-4 p-4">
         <div className="flex min-w-0 flex-1 flex-col gap-4">
           <DownloadForm id={dfId} enqueue={enqueue} />
           <div className="flex gap-2">
-            <Button form={dfId} type="submit">
+            <Button form={dfId} type="submit" disabled={busy}>
               <DownloadIcon />
               {downloading ? 'Add to Queue' : 'Download'}
             </Button>
@@ -74,6 +91,17 @@ function App() {
               <Button variant="destructive" type="button" onClick={abort}>
                 <SquareIcon fill="white" />
                 Abort
+              </Button>
+            )}
+            {normalizing ? (
+              <Button variant="destructive" type="button" onClick={abortNormalize}>
+                <SquareIcon fill="white" />
+                Abort Normalize
+              </Button>
+            ) : (
+              <Button variant="secondary" type="button" onClick={handleNormalize} disabled={busy}>
+                <FolderSyncIcon />
+                Normalize
               </Button>
             )}
             <SettingsDialog className="ms-auto" />
