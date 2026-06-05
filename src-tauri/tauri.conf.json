@@ -15,7 +15,7 @@
         "title": "m3u8",
         "center": true,
         "visible": false,
-        "width": 560,
+        "width": 800,
         "height": 960,
         "useHttpsScheme": true
       }
