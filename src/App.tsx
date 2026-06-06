@@ -114,9 +114,7 @@ function App() {
             <SegmentProgress {...{ width, total, progress }} />
           </ScrollArea>
         </div>
-        {queue.length > 0 && (
-          <QueuePanel queue={queue} onCancel={cancel} onAbort={abort} onRetry={retry} />
-        )}
+        <QueuePanel queue={queue} onCancel={cancel} onAbort={abort} onRetry={retry} />
       </main>
       <Toaster richColors />
     </>

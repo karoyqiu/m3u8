@@ -24,11 +24,15 @@ export default function QueuePanel({ queue, onCancel, onAbort, onRetry }: QueueP
         )}
       </div>
       <ScrollArea className="min-h-0 flex-1">
-        <div className="flex flex-col gap-1 px-2 pb-2">
-          {queue.map((item) => (
-            <QueueRow key={item.id} item={item} onCancel={onCancel} onAbort={onAbort} onRetry={onRetry} />
-          ))}
-        </div>
+        {queue.length > 0 ? (
+          <div className="flex flex-col gap-1 px-2 pb-2">
+            {queue.map((item) => (
+              <QueueRow key={item.id} item={item} onCancel={onCancel} onAbort={onAbort} onRetry={onRetry} />
+            ))}
+          </div>
+        ) : (
+          <p className="px-3 py-4 text-xs text-muted-foreground text-center">No downloads queued</p>
+        )}
       </ScrollArea>
     </div>
   );
