@@ -1,6 +1,6 @@
 import { readLocalStorageValue } from '@mantine/hooks';
 import { join } from '@tauri-apps/api/path';
-import { readDir, remove, rename } from '@tauri-apps/plugin-fs';
+import { exists, readDir, remove, rename } from '@tauri-apps/plugin-fs';
 import { Command } from '@tauri-apps/plugin-shell';
 import pLimit from 'p-limit';
 import { useCallback, useRef, useState } from 'react';
@@ -44,6 +44,10 @@ export const useNormalize = () => {
     const limit = pLimit(Math.max(threads, 1));
     let done = 0;
 
+    // If a "normalized" subdir exists, write outputs there instead of overwriting sources.
+    const normalizedDir = await join(dir, 'normalized');
+    const useNormalizedDir = await exists(normalizedDir);
+
     try {
       await Promise.all(
         files.map((entry) =>
@@ -54,12 +58,14 @@ export const useNormalize = () => {
             const ext = name.split('.').pop()!.toLowerCase();
             const nameNoExt = name.slice(0, -(ext.length + 1));
             const inputPath = await join(dir, name);
-            const tempPath = await join(dir, `${nameNoExt}.normalizing.${ext}`);
+            const outputPath = useNormalizedDir
+              ? await join(normalizedDir, name)
+              : await join(dir, `${nameNoExt}.normalizing.${ext}`);
 
             const isVideo = VIDEO_EXTENSIONS.has(ext);
             const args = isVideo
-              ? ['-v', 'quiet', '-y', '-i', inputPath, '-c:v', 'copy', '-af', 'dynaudnorm=f=150:g=13', tempPath]
-              : ['-v', 'quiet', '-y', '-i', inputPath, '-af', 'dynaudnorm=f=150:g=13', tempPath];
+              ? ['-v', 'quiet', '-y', '-i', inputPath, '-c:v', 'copy', '-af', 'dynaudnorm=f=150:g=13', outputPath]
+              : ['-v', 'quiet', '-y', '-i', inputPath, '-af', 'dynaudnorm=f=150:g=13', outputPath];
 
             const ffmpeg = Command.sidecar('binaries/ffmpeg', args);
             const waitForFfmpeg = waitForCommand('ffmpeg', ffmpeg);
@@ -75,10 +81,18 @@ export const useNormalize = () => {
 
             try {
               await waitForFfmpeg;
-              await rename(tempPath, inputPath);
+              if (!useNormalizedDir) {
+                // Overwrite the source only when not writing into a normalized subdir.
+                await rename(outputPath, inputPath);
+              } else {
+                // Move into normalized/ succeeded — remove the now-redundant source.
+                // Failure here doesn't invalidate the normalized output, so don't
+                // let it cascade into deleting outputPath below.
+                await remove(inputPath).catch(() => {});
+              }
               done++;
             } catch (e) {
-              remove(tempPath).catch(() => {});
+              remove(outputPath).catch(() => {});
               if (!ctrl.current?.signal.aborted) throw e;
             } finally {
               ctrl.current?.signal.removeEventListener('abort', killFfmpeg);
