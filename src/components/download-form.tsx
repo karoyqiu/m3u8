@@ -35,7 +35,7 @@ export default function DownloadForm(props: DownloadFormProps) {
         autoComplete="off"
         onSubmit={form.handleSubmit((values) => {
           enqueue(values);
-          form.reset({ url: '', filename: '', referer: values.referer });
+          form.reset({ url: '', filename: values.filename, referer: values.referer });
         })}
       >
         <FormField
